@@ -10,7 +10,13 @@ export function createAuth(db: Db, config: Config) {
     secret: config.APP_SECRET,
     baseURL: config.PUBLIC_URL,
     basePath: '/api/auth',
-    trustedOrigins: [config.PUBLIC_URL],
+    // Sign-in works from whichever address the household uses (http://tower.local:8080,
+    // http://192.168.1.10:8080, a proxy's https address): the request's own host is trusted,
+    // so only cross-site requests, whose Origin differs from it, are refused.
+    trustedOrigins: async (request?: Request) => {
+      const host = request?.headers.get('host');
+      return [config.PUBLIC_URL, ...(host ? [`http://${host}`, `https://${host}`] : [])];
+    },
     database: drizzleAdapter(db, {
       provider: 'pg',
       schema: {
@@ -34,6 +40,8 @@ export function createAuth(db: Db, config: Config) {
     advanced: {
       // Behind a plain-HTTP LAN address (common on Unraid) secure cookies would never be sent.
       useSecureCookies: config.PUBLIC_URL.startsWith('https://'),
+      // Always on: Better Auth would otherwise skip it under test, so tests wouldn't match production.
+      disableOriginCheck: false,
     },
     telemetry: { enabled: false },
   });
