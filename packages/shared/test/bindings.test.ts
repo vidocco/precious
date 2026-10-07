@@ -96,6 +96,7 @@ describe('suggestFill', () => {
     f({ id: 'developer', label: 'Developer', type: 'text' }),
     f({ id: 'platform', label: 'Platform', type: 'text' }),
     f({ id: 'platform_family', label: 'Platform family', type: 'text' }),
+    f({ id: 'year_bought', label: 'Year bought', type: 'number' }),
   ];
   it('maps by name and label, and only when sure', () => {
     expect(suggestFill(['id', 'title', 'image', 'year', 'developer', 'subtitle', 'platform'], fields)).toEqual({

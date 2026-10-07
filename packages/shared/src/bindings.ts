@@ -341,8 +341,9 @@ export function suggestFill(outputKeys: string[], fields: FieldDefinition[]): Fi
       const exact = targets.filter((f) => words(f.id).join(' ') === k || words(f.label).join(' ') === k);
       if (exact.length === 1) target = exact[0]?.id;
     }
+    // "year" fits "Release year" but not "Year bought": only the label's last word counts.
     if (!target && !k.includes(' ')) {
-      const partial = targets.filter((f) => words(f.label).includes(k) || words(f.id).includes(k));
+      const partial = targets.filter((f) => words(f.label).at(-1) === k || words(f.id).at(-1) === k);
       if (partial.length === 1) target = partial[0]?.id;
     }
     if (target && !used.has(target)) {

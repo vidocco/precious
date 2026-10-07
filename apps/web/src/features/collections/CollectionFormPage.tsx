@@ -34,6 +34,7 @@ interface FormState {
   visibility: Visibility;
   editAccess: EditAccess;
   defaultView: View;
+  quickAdd: boolean;
   ownerId: string;
 }
 
@@ -94,6 +95,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           visibility: c.visibility,
           editAccess: c.editAccess,
           defaultView: c.defaultView,
+          quickAdd: c.quickAdd,
           ownerId: c.ownerId,
         });
       }
@@ -107,6 +109,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         visibility: 'household',
         editAccess: 'owner',
         defaultView: 'wall',
+        quickAdd: false,
         ownerId: me?.id ?? '',
       });
     }
@@ -256,6 +259,22 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             ]}
           />
         </Field>
+        {template && template.bindings.search.length > 0 && (
+          <Field
+            label="After picking a search result"
+            help="With quick add, a found item is saved straight away when no match needs choosing; you can still edit it after."
+          >
+            <Segmented
+              label="After picking a search result"
+              value={form.quickAdd ? 'quick' : 'review'}
+              onChange={(v) => set({ quickAdd: v === 'quick' })}
+              options={[
+                { value: 'review', label: 'Check the details first' },
+                { value: 'quick', label: 'Quick add' },
+              ]}
+            />
+          </Field>
+        )}
         {mode === 'edit' && me?.role === 'admin' && users && (
           <Field label="Owner" htmlFor="owner">
             <Select

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, errorMessage } from '../../api/client.ts';
 import { useTemplate, useTemplateMutations } from '../../api/queries.ts';
 import { Button, ConfirmStrip, cx, EmptyState, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
+import { BindingsTab } from './BindingsTab.tsx';
 import { EMPTY_TEMPLATE } from './editorUtils.ts';
 import { FieldsTab } from './FieldsTab.tsx';
 import { CardTab, HeaderTab, ItemPageTab } from './LayoutTabs.tsx';
@@ -16,7 +17,11 @@ function toData(t: TemplateDto): TemplateData {
   return structuredClone({ name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings });
 }
 
-/** Drops layout references to fields that no longer exist. */
+function pruneFill(fill: Record<string, string>, ok: (r: string) => boolean) {
+  return Object.fromEntries(Object.entries(fill).filter(([target]) => ok(target)));
+}
+
+/** Drops layout and data source references to fields that no longer exist. */
 function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
   const ids = new Set(fields.map((f) => f.id));
   const ok = (r: string | null) => r === null || r.startsWith('$') || ids.has(r);
@@ -38,6 +43,16 @@ function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
         .filter((s) => s.fields.length),
     },
     header: { figures: t.header.figures.filter((f) => f.kind === 'count' || ids.has(f.field)) },
+    bindings: {
+      search: t.bindings.search.map((p) => ({ ...p, fill: pruneFill(p.fill, ok) })),
+      steps: t.bindings.steps.map((s) => {
+        const match = s.match && {
+          ...s.match,
+          yearField: s.match.yearField && ok(s.match.yearField) ? s.match.yearField : undefined,
+        };
+        return { ...s, fill: pruneFill(s.fill, ok), ...(match && { match }) };
+      }),
+    },
   };
 }
 
@@ -230,12 +245,7 @@ export function TemplateEditorPage({ mode }: { mode: 'create' | 'edit' }) {
               on another field such as the platform.
             </EmptyState>
           )}
-          {tab === 'Data sources' && (
-            <EmptyState title="Coming in the next version">
-              Here you’ll choose which data sources search for items of this template, fill in their fields and keep
-              values like prices up to date.
-            </EmptyState>
-          )}
+          {tab === 'Data sources' && <BindingsTab t={t} set={set} />}
         </div>
       </fieldset>
     </div>

@@ -189,18 +189,27 @@ export async function runPipeline(
     if (start.result.id !== undefined) refs[provider.ref] = String(start.result.id);
     previous[provider.id] = start.result;
     apply(provider.fill, start.result, { name, step: provider.id });
-    out.steps.push({ id: provider.id, label: name, status: 'ok', ref: refs[provider.ref] });
+    out.steps.push({
+      id: provider.id,
+      label: b ? `${name} · ${b.endpoint.name}` : name,
+      status: 'ok',
+      ref: refs[provider.ref],
+    });
   }
 
   // 2. Each lookup step, in order.
   for (const step of bindings.steps) {
     const b = bound.get(step.endpointId);
-    const report: StepReport = { id: step.id, label: b ? b.source.name : step.id, status: 'ok' };
+    const report: StepReport = {
+      id: step.id,
+      label: b ? `${b.source.name} · ${b.endpoint.name}` : step.id,
+      status: 'ok',
+    };
     out.steps.push(report);
     if (b?.endpoint.role !== 'lookup') {
       report.status = 'failed';
       report.message = 'Its lookup endpoint no longer exists';
-      out.warnings.push({ step: step.id, message: `${report.label}: ${report.message}` });
+      out.warnings.push({ step: step.id, message: `${b?.source.name ?? step.id}: ${report.message}` });
       continue;
     }
     const input = () => ({ query, refs: { ...refs }, item: { ...item }, previous: { ...previous } });
@@ -220,7 +229,7 @@ export async function runPipeline(
         if (mb?.endpoint.role !== 'search') {
           report.status = 'failed';
           report.message = 'Its match search endpoint no longer exists';
-          out.warnings.push({ step: step.id, message: `${report.label}: ${report.message}` });
+          out.warnings.push({ step: step.id, message: `${b?.source.name ?? step.id}: ${report.message}` });
           continue;
         }
         let matchQuery: string;
@@ -229,7 +238,7 @@ export async function runPipeline(
         } catch (err) {
           report.status = 'failed';
           report.message = (err as Error).message;
-          out.warnings.push({ step: step.id, message: `${report.label}: ${report.message}` });
+          out.warnings.push({ step: step.id, message: `${b?.source.name ?? step.id}: ${report.message}` });
           continue;
         }
         if (!matchQuery) {
@@ -241,7 +250,7 @@ export async function runPipeline(
         if (!res.ok) {
           report.status = 'failed';
           report.message = firstError(res);
-          out.warnings.push({ step: step.id, message: `${report.label}: ${report.message}` });
+          out.warnings.push({ step: step.id, message: `${b?.source.name ?? step.id}: ${report.message}` });
           continue;
         }
         const year = m.yearField ? item[m.yearField] : undefined;
@@ -269,7 +278,7 @@ export async function runPipeline(
           report.message = `${candidates.length} possible matches`;
           out.pending.push({
             step: step.id,
-            label: report.label,
+            label: b.source.name,
             query: matchQuery,
             candidates: candidates.slice(0, MAX_CANDIDATES),
           });
@@ -287,7 +296,7 @@ export async function runPipeline(
     if (!res.ok) {
       report.status = 'failed';
       report.message = firstError(res);
-      out.warnings.push({ step: step.id, message: `${report.label}: ${report.message}` });
+      out.warnings.push({ step: step.id, message: `${b?.source.name ?? step.id}: ${report.message}` });
       continue;
     }
     previous[step.id] = res.output;

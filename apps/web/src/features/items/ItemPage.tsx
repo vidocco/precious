@@ -4,6 +4,7 @@ import { errorMessage } from '../../api/client.ts';
 import { useCollection, useItem, useItemMutations, useTemplate, useUsers } from '../../api/queries.ts';
 import { Button, ConfirmStrip, ErrorBox, Spinner } from '../../components/ui.tsx';
 import { ItemView } from './ItemView.tsx';
+import { RefreshSheet } from './RefreshSheet.tsx';
 
 export function ItemPage() {
   const { itemId } = useParams({ from: '/app/i/$itemId' });
@@ -11,10 +12,11 @@ export function ItemPage() {
   const collection = useCollection(item.data?.collectionId ?? '');
   const template = useTemplate(collection.data?.templateId);
   const { data: users } = useUsers();
-  const { remove } = useItemMutations();
+  const { remove, update } = useItemMutations();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   if (item.isError)
     return (
@@ -31,6 +33,7 @@ export function ItemPage() {
   }
   const it = item.data;
   const c = collection.data;
+  const canRefresh = c.canEdit && template.data.bindings.steps.length > 0 && Object.keys(it.externalRefs).length > 0;
 
   return (
     <div className="dark-scope min-h-[calc(100dvh-57px)]">
@@ -48,6 +51,11 @@ export function ItemPage() {
         </nav>
         {c.canEdit && (
           <div className="flex gap-2">
+            {canRefresh && (
+              <Button icon="refresh" onClick={() => setRefreshing(true)}>
+                Refresh
+              </Button>
+            )}
             <Link to="/i/$itemId/edit" params={{ itemId: it.id }}>
               <Button icon="edit" tabIndex={-1}>
                 Edit
@@ -88,8 +96,14 @@ export function ItemPage() {
           layout={template.data.itemLayout}
           collectionName={c.name}
           users={users}
+          onUnlock={
+            c.canEdit
+              ? (ref) => update.mutate({ id: it.id, unlock: [ref] }, { onError: (err) => setError(errorMessage(err)) })
+              : undefined
+          }
         />
       </div>
+      {refreshing && <RefreshSheet item={it} template={template.data} onClose={() => setRefreshing(false)} />}
     </div>
   );
 }

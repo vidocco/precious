@@ -1,15 +1,56 @@
-import { buildItemSchema, type FieldDefinition, type ItemDto } from '@precious/shared';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import {
+  buildItemSchema,
+  type FieldDefinition,
+  type FillResult,
+  type FillSource,
+  type ItemDto,
+  type PendingMatch,
+} from '@precious/shared';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { ApiError, errorMessage, mediaUrl } from '../../api/client.ts';
-import { uploadImage, useCollection, useItem, useItemMutations, useTemplate, useUsers } from '../../api/queries.ts';
+import {
+  importRemoteImage,
+  uploadImage,
+  useCollection,
+  useItem,
+  useItemMutations,
+  useLookupMutations,
+  useTemplate,
+  useUsers,
+} from '../../api/queries.ts';
 import { Icon } from '../../components/Icon.tsx';
-import { Button, Caps, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
+import { MatchChooser } from '../../components/MatchChooser.tsx';
+import { Button, Caps, cx, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
+import { type Draft, getDraft } from '../../lib/drafts.ts';
 import { FieldInput, type FormValue } from './FieldInput.tsx';
+
+/** Where a value on the review screen came from: a data source, or you. */
+function SourceTag({ source, edited }: { source?: FillSource; edited?: boolean }) {
+  if (!source && !edited) return null;
+  return (
+    <span
+      className={cx('max-w-[50%] truncate text-[0.72rem] font-medium', edited ? 'text-ink-muted' : 'text-accent')}
+      title={edited ? 'You changed this' : `Filled in from ${source?.name}`}
+    >
+      {edited ? 'You' : source?.name}
+    </span>
+  );
+}
 
 type Cover = { id: string; color: string | null } | null;
 
-function CoverPicker({ cover, onChange }: { cover: Cover; onChange: (c: Cover) => void }) {
+function CoverPicker({
+  cover,
+  onChange,
+  tag,
+  loading,
+}: {
+  cover: Cover;
+  onChange: (c: Cover) => void;
+  tag?: ReactNode;
+  loading?: boolean;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +70,10 @@ function CoverPicker({ cover, onChange }: { cover: Cover; onChange: (c: Cover) =
   }
   return (
     <div className="grid content-start gap-2">
-      <Caps>Cover</Caps>
+      <div className="flex max-w-[220px] items-baseline justify-between gap-2">
+        <Caps>Cover</Caps>
+        {tag}
+      </div>
       <button
         type="button"
         onClick={() => input.current?.click()}
@@ -47,7 +91,7 @@ function CoverPicker({ cover, onChange }: { cover: Cover; onChange: (c: Cover) =
         ) : (
           <span className="grid justify-items-center gap-1.5 px-4 text-center text-[0.85rem]">
             <Icon name="image" size={28} />
-            {busy ? 'Uploading…' : 'Drop an image here or click to choose one'}
+            {busy ? 'Uploading…' : loading ? 'Getting the cover…' : 'Drop an image here or click to choose one'}
           </span>
         )}
       </button>
@@ -81,25 +125,88 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const template = useTemplate(collection.data?.templateId);
   const { data: users } = useUsers();
   const { create, update } = useItemMutations();
+  const { fill: refill } = useLookupMutations();
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { title?: string; draft?: string };
+  const [draft] = useState<Draft | undefined>(() => {
+    const d = mode === 'create' ? getDraft(search.draft) : undefined;
+    return d && d.collectionId === params.collectionId ? d : undefined;
+  });
 
   const [title, setTitle] = useState('');
   const [cover, setCover] = useState<Cover>(null);
   const [values, setValues] = useState<Record<string, FormValue> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  // Review screen: the latest fill, what you changed by hand, and the matches asked about.
+  const [fill, setFill] = useState<FillResult | undefined>(draft?.fill);
+  const [edited, setEdited] = useState<Set<string>>(() => new Set());
+  const [asked, setAsked] = useState<PendingMatch[]>(draft?.fill.pending ?? []);
+  const [choices, setChoices] = useState<Record<string, string | null>>({});
+  const [coverLoading, setCoverLoading] = useState(false);
+  const coverUrl = useRef<string | undefined>(undefined);
 
   const fields = (template.data?.fields ?? []).filter((f) => !f.hidden);
   const ready = template.data && collection.data && (mode === 'create' || item.data);
 
+  async function loadCover(f: FillResult) {
+    if (!f.cover || f.cover.url === coverUrl.current) return;
+    coverUrl.current = f.cover.url;
+    setCoverLoading(true);
+    try {
+      const img = await importRemoteImage(f.cover);
+      setCover({ id: img.id, color: img.color });
+    } catch {
+      coverUrl.current = undefined;
+    } finally {
+      setCoverLoading(false);
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fills the form once, when everything has loaded
   useEffect(() => {
     if (!ready || values) return;
     if (mode === 'edit' && item.data) {
       setTitle(item.data.title);
       setCover(item.data.cover ? { id: item.data.cover.id, color: item.data.cover.color } : null);
     }
+    if (draft) {
+      setTitle(draft.fill.title ?? draft.result.title);
+      setValues({ ...initialValues(fields), ...(draft.fill.data as Record<string, FormValue>) });
+      void loadCover(draft.fill);
+      return;
+    }
+    if (mode === 'create' && search.title) setTitle(search.title);
     setValues(initialValues(fields, item.data));
-  }, [ready, values, mode, item.data, fields]);
+  }, [ready, values, mode, item.data, fields, draft, search.title]);
+
+  /** Asks the server again with your match choices, keeping whatever you changed by hand. */
+  async function choose(step: string, id: string | null) {
+    if (!draft) return;
+    const next = { ...choices, [step]: id };
+    setChoices(next);
+    try {
+      const f = await refill.mutateAsync({
+        collectionId: draft.collectionId,
+        provider: draft.provider,
+        query: draft.query,
+        result: draft.result,
+        choices: next,
+      });
+      setFill(f);
+      setAsked((prev) => [...prev, ...f.pending.filter((p) => !prev.some((x) => x.step === p.step))]);
+      if (!edited.has('$title') && f.title) setTitle(f.title);
+      setValues((prev) => {
+        const out = { ...prev };
+        for (const field of fields) if (!edited.has(field.id)) out[field.id] = f.data[field.id] as FormValue;
+        return out;
+      });
+      if (!edited.has('$cover')) void loadCover(f);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+  const markEdited = (target: string) => setEdited((prev) => (prev.has(target) ? prev : new Set(prev).add(target)));
 
   if (!ready || !values || !template.data || !collection.data)
     return (
@@ -122,11 +229,19 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
     setError('');
     try {
       if (mode === 'create') {
+        const sources = fill
+          ? Object.fromEntries(
+              Object.entries(fill.sources).filter(
+                ([target]) => !edited.has(target) && (target !== '$cover' || (cover && coverUrl.current)),
+              ),
+            )
+          : undefined;
         const created = await create.mutateAsync({
           collectionId,
           title,
           coverImageId: cover?.id ?? null,
           data: parsed.data ?? {},
+          ...(fill && { externalRefs: fill.refs, sources }),
         });
         navigate({ to: '/i/$itemId', params: { itemId: created.id } });
       } else if (params.itemId) {
@@ -155,15 +270,50 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <h1 className="text-[2rem] leading-none font-bold">
           {mode === 'create' ? 'Add an item' : `Edit ${item.data?.title}`}
         </h1>
-        {mode === 'create' && (
-          <p className="text-ink-muted">
-            Searching data sources to fill this in arrives in a later version; for now, add it by hand.
+        {fill && (
+          <p className="flex flex-wrap items-baseline gap-x-3 text-ink-muted">
+            <span>
+              Filled in from{' '}
+              {[...new Set(Object.values(fill.sources).map((x) => x.name))].join(' and ') || 'nothing yet'}. Check the
+              details, then add it.
+            </span>
+            {draft && (
+              <Link
+                to="/c/$collectionId"
+                params={{ collectionId }}
+                search={{ add: draft.query }}
+                className="text-[0.9rem] font-semibold"
+              >
+                Back to results
+              </Link>
+            )}
           </p>
         )}
       </div>
       {error && <ErrorBox>{error}</ErrorBox>}
+      {asked.length > 0 && (
+        <div className="grid gap-2 md:pl-[252px]">
+          {asked.map((p) => (
+            <MatchChooser
+              key={p.step}
+              pending={p}
+              value={choices[p.step]}
+              disabled={refill.isPending}
+              onChoose={(id) => void choose(p.step, id)}
+            />
+          ))}
+        </div>
+      )}
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
-        <CoverPicker cover={cover} onChange={setCover} />
+        <CoverPicker
+          cover={cover}
+          loading={coverLoading}
+          onChange={(c) => {
+            markEdited('$cover');
+            setCover(c);
+          }}
+          tag={fill && <SourceTag source={cover ? fill.sources.$cover : undefined} edited={edited.has('$cover')} />}
+        />
         <div className="grid content-start gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <TextField
@@ -173,7 +323,11 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
                 </>
               }
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                markEdited('$title');
+                setTitle(e.target.value);
+              }}
+              aside={fill && <SourceTag source={fill.sources.$title} edited={edited.has('$title')} />}
               error={errors.title}
               autoFocus={mode === 'create'}
             />
@@ -185,13 +339,31 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
               value={values[f.id]}
               users={users}
               error={errors[f.id]}
-              onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
+              aside={
+                fill && (
+                  <SourceTag
+                    source={values[f.id] === undefined ? undefined : fill.sources[f.id]}
+                    edited={edited.has(f.id)}
+                  />
+                )
+              }
+              onChange={(v) => {
+                markEdited(f.id);
+                setValues((prev) => ({ ...prev, [f.id]: v }));
+              }}
             />
           ))}
         </div>
       </div>
+      {fill && fill.warnings.length > 0 && (
+        <ul className="m-0 grid list-disc gap-0.5 pl-5 text-[0.85rem] text-ink-muted md:ml-[252px]" aria-label="Notes">
+          {fill.warnings.map((w) => (
+            <li key={`${w.step}-${w.target}-${w.message}`}>{w.message}</li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap gap-2 md:pl-[252px]">
-        <Button type="submit" variant="primary" disabled={busy}>
+        <Button type="submit" variant="primary" disabled={busy || coverLoading || refill.isPending}>
           {busy ? 'Saving…' : mode === 'create' ? `Add to ${c.name}` : 'Save changes'}
         </Button>
         <Link {...cancel}>

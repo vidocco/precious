@@ -6,12 +6,18 @@ import type {
   EndpointDto,
   EndpointInput,
   FigureValue,
+  FillResult,
   ItemDto,
   ItemInput,
   ItemListQuery,
   ItemListResponse,
   ItemUpdate,
+  LookupFillInput,
+  LookupSearchResponse,
   PresetDto,
+  RefreshInput,
+  RefreshResult,
+  RemoteImageInput,
   RunRequest,
   RunResult,
   SearchResponse,
@@ -22,6 +28,8 @@ import type {
   SourceInput,
   TemplateDto,
   TemplateInput,
+  TryBindingsInput,
+  TryBindingsResult,
   UpdateUserInput,
   UserDto,
 } from '@precious/shared';
@@ -219,6 +227,39 @@ export function useItemMutations() {
 
 export const uploadImage = (file: File) =>
   api.upload<{ id: string; width: number; height: number; color: string }>('/api/images', file);
+
+// ---------------------------------------------------------------- search-to-add
+
+/** Searches one of the collection template's data sources (debounce the query first). */
+export const useLookupSearch = (collectionId: string, provider: string | undefined, query: string) =>
+  useQuery({
+    queryKey: ['lookup', collectionId, provider, query],
+    queryFn: () =>
+      api.post<LookupSearchResponse>(`/api/collections/${collectionId}/lookup/search`, { provider, query }),
+    enabled: !!provider && query.trim().length >= 2,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
+export function useLookupMutations() {
+  return {
+    fill: useMutation({
+      mutationFn: ({ collectionId, ...input }: LookupFillInput & { collectionId: string }) =>
+        api.post<FillResult>(`/api/collections/${collectionId}/lookup/fill`, input),
+    }),
+    refresh: useMutation({
+      mutationFn: ({ id, ...input }: RefreshInput & { id: string }) =>
+        api.post<RefreshResult>(`/api/items/${id}/refresh`, input),
+    }),
+    tryBindings: useMutation({
+      mutationFn: (input: TryBindingsInput) => api.post<TryBindingsResult>('/api/templates/try', input),
+    }),
+  };
+}
+
+export const importRemoteImage = (input: RemoteImageInput) =>
+  api.post<{ id: string; width: number; height: number; color: string | null }>('/api/images/remote', input);
 
 // ---------------------------------------------------------------- search & public
 

@@ -107,11 +107,18 @@ const collectionRoute = createRoute({
     dir: z.enum(['asc', 'desc']).optional(),
     view: z.enum(['wall', 'table']).optional(),
     filter: z.array(z.string()).optional(),
+    add: z.string().optional(),
   }),
   component: CollectionPage,
 });
 const editCollectionRoute = child('/c/$collectionId/edit', () => <CollectionFormPage mode="edit" />);
-const newItemRoute = child('/c/$collectionId/new', () => <ItemFormPage mode="create" />);
+const newItemRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/c/$collectionId/new',
+  // A title typed in the search sheet, or a draft found through a data source.
+  validateSearch: z.object({ title: z.string().optional(), draft: z.string().optional() }),
+  component: () => <ItemFormPage mode="create" />,
+});
 const itemRoute = child('/i/$itemId', ItemPage);
 const editItemRoute = child('/i/$itemId/edit', () => <ItemFormPage mode="edit" />);
 const searchRoute = createRoute({

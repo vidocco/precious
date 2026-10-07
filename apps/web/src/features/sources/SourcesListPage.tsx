@@ -177,6 +177,7 @@ export function SourcesListPage() {
                 <th className="border-b border-line px-3.5 py-2">Source</th>
                 <th className="border-b border-line px-3.5 py-2">Kind</th>
                 <th className="border-b border-line px-3.5 py-2">Endpoints</th>
+                <th className="border-b border-line px-3.5 py-2">Used by</th>
                 <th className="border-b border-line px-3.5 py-2">Last call</th>
               </tr>
             </thead>
@@ -203,6 +204,18 @@ export function SourcesListPage() {
                   </td>
                   <td className="border-b border-line px-3.5 py-2.5 text-ink-muted">
                     {s.endpoints.map((e) => e.name).join(', ') || '—'}
+                  </td>
+                  <td className="border-b border-line px-3.5 py-2.5 text-ink-muted">
+                    {s.usedBy.length === 0
+                      ? '—'
+                      : s.usedBy.map((u, i) => (
+                          <span key={u.templateId}>
+                            {i > 0 && ', '}
+                            <Link to="/data/templates/$templateId" params={{ templateId: u.templateId }}>
+                              {u.name}
+                            </Link>
+                          </span>
+                        ))}
                   </td>
                   <td className="border-b border-line px-3.5 py-2.5 whitespace-nowrap">
                     <StatusDot s={s} />

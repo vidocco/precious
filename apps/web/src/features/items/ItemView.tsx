@@ -5,11 +5,25 @@ import { Icon } from '../../components/Icon.tsx';
 import { Caps, cx } from '../../components/ui.tsx';
 import { LOCALE, refLabel, refValue } from '../../lib/format.ts';
 
-function sourceLabel(item: ItemDto, ref: string, users?: UserDto[]) {
+function sourceLabel(item: ItemDto, ref: string, users?: UserDto[], onUnlock?: (ref: string) => void) {
   const meta = item.fieldMeta[ref];
   if (!meta) return null;
   const who =
     meta.source === 'user' ? (users?.find((u) => u.id === meta.by)?.name.split(' ')[0] ?? 'You') : meta.source;
+  if (meta.locked && onUnlock) {
+    return (
+      <button
+        type="button"
+        onClick={() => onUnlock(ref)}
+        className="inline-flex items-center gap-1 rounded-[5px] px-1 text-[0.64rem] whitespace-nowrap text-ink-faint hover:bg-surface-sunk hover:text-ink"
+        title="Edited by hand, so refreshing keeps it. Click to unlock it, so refreshing can update it again."
+        aria-label={`Unlock ${ref === '$title' ? 'the title' : 'this value'} (edited by ${who})`}
+      >
+        <Icon name="lock" size={11} />
+        {who}
+      </button>
+    );
+  }
   return (
     <span
       className="inline-flex items-center gap-1 text-[0.64rem] whitespace-nowrap text-ink-faint"
@@ -28,12 +42,15 @@ export function ItemView({
   layout,
   collectionName,
   users,
+  onUnlock,
 }: {
   item: ItemDto;
   fields: FieldDefinition[];
   layout: ItemLayout;
   collectionName: string;
   users?: UserDto[];
+  /** When set, locked values can be unlocked from their source label. */
+  onUnlock?: (ref: string) => void;
 }) {
   const ctxValue = (ref: string) => {
     const field = fields.find((f) => f.id === ref);
@@ -110,7 +127,7 @@ export function ItemView({
                         ctxValue(ref)
                       )}
                     </dd>
-                    {sourceLabel(item, ref, users)}
+                    {sourceLabel(item, ref, users, onUnlock)}
                   </div>
                 );
               })}

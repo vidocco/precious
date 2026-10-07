@@ -91,6 +91,7 @@ export function Field({
   children,
   htmlFor,
   className,
+  aside,
 }: {
   label: ReactNode;
   help?: ReactNode;
@@ -98,12 +99,24 @@ export function Field({
   children: ReactNode;
   htmlFor?: string;
   className?: string;
+  /** Shown at the end of the label row, outside the label (e.g. where the value came from). */
+  aside?: ReactNode;
 }) {
+  const labelEl = (
+    <label htmlFor={htmlFor} className="text-[0.72rem] font-semibold tracking-[0.08em] text-ink-muted uppercase">
+      {label}
+    </label>
+  );
   return (
     <div className={cx('grid content-start gap-1.5', className)}>
-      <label htmlFor={htmlFor} className="text-[0.72rem] font-semibold tracking-[0.08em] text-ink-muted uppercase">
-        {label}
-      </label>
+      {aside ? (
+        <div className="flex items-baseline justify-between gap-2">
+          {labelEl}
+          {aside}
+        </div>
+      ) : (
+        labelEl
+      )}
       {children}
       {error ? (
         <span className="text-[0.8rem] text-danger" role="alert">
@@ -143,11 +156,12 @@ export function TextField({
   label,
   help,
   error,
+  aside,
   ...rest
-}: { label: ReactNode; help?: ReactNode; error?: string } & InputHTMLAttributes<HTMLInputElement>) {
+}: { label: ReactNode; help?: ReactNode; error?: string; aside?: ReactNode } & InputHTMLAttributes<HTMLInputElement>) {
   const id = useId();
   return (
-    <Field label={label} help={help} error={error} htmlFor={rest.id ?? id}>
+    <Field label={label} help={help} error={error} htmlFor={rest.id ?? id} aside={aside}>
       <TextInput id={rest.id ?? id} aria-invalid={!!error || undefined} {...rest} />
     </Field>
   );

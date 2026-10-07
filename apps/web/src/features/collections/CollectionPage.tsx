@@ -1,6 +1,6 @@
 import type { CollectionDto, FieldDefinition, ItemDto, TemplateDto } from '@precious/shared';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button as AriaButton, Checkbox, CheckboxGroup, Dialog, DialogTrigger, Popover } from 'react-aria-components';
 import { errorMessage } from '../../api/client.ts';
 import { useCollection, useCollectionMutations, useFigures, useItems, useMe, useTemplate } from '../../api/queries.ts';
@@ -22,6 +22,7 @@ import {
 } from '../../components/ui.tsx';
 import { refLabel, refValue } from '../../lib/format.ts';
 import { useDebounced, useStoredState } from '../../lib/hooks.ts';
+import { AddSheet } from '../items/AddSheet.tsx';
 import { VISIBILITY_LABEL } from './labels.ts';
 
 const PAGE = 60;
@@ -33,16 +34,29 @@ export interface CollectionSearch {
   dir?: 'asc' | 'desc';
   view?: 'wall' | 'table';
   filter?: string[];
+  /** The add sheet is open, searching for this. */
+  add?: string;
 }
 
-export function Fab({ collectionId }: { collectionId: string }) {
+const fabClass =
+  'fixed right-[max(20px,env(safe-area-inset-right,0px))] bottom-[max(20px,env(safe-area-inset-bottom,0px))] z-20 grid size-[58px] place-items-center rounded-full bg-accent text-accent-ink shadow-float transition hover:scale-105';
+
+/** The round "+": opens the search sheet when the template has data sources, the form otherwise. */
+export function Fab({ collectionId, onAdd }: { collectionId: string; onAdd?: () => void }) {
+  if (onAdd) {
+    return (
+      <button type="button" onClick={onAdd} aria-label="Add item" title="Add item" className={fabClass}>
+        <Icon name="plus" size={26} />
+      </button>
+    );
+  }
   return (
     <Link
       to="/c/$collectionId/new"
       params={{ collectionId }}
       aria-label="Add item"
       title="Add item"
-      className="fixed right-[max(20px,env(safe-area-inset-right,0px))] bottom-[max(20px,env(safe-area-inset-bottom,0px))] z-20 grid size-[58px] place-items-center rounded-full bg-accent text-accent-ink shadow-float transition hover:scale-105"
+      className={fabClass}
     >
       <Icon name="plus" size={26} />
     </Link>
@@ -261,6 +275,11 @@ export function CollectionPage() {
       navigate({ search: (s: CollectionSearch) => ({ ...s, q: debouncedQ || undefined }), replace: true });
   }, [debouncedQ, navigate, search.q]);
 
+  const setAddQuery = useCallback(
+    (add: string) => navigate({ search: (s: CollectionSearch) => ({ ...s, add }), replace: true }),
+    [navigate],
+  );
+
   const items = useItems(collectionId, { q: search.q, sort, dir, filter: filters, limit });
   const fields = template.data?.fields ?? [];
   const [columns, setColumns] = useStoredState<string[]>(
@@ -451,7 +470,21 @@ export function CollectionPage() {
         </div>
       )}
 
-      {c.canEdit && <Fab collectionId={c.id} />}
+      {c.canEdit && (
+        <Fab
+          collectionId={c.id}
+          onAdd={t.bindings.search.length ? () => setSearch({ add: search.add ?? '' }) : undefined}
+        />
+      )}
+      {c.canEdit && search.add !== undefined && t.bindings.search.length > 0 && (
+        <AddSheet
+          collection={c}
+          template={t}
+          query={search.add}
+          onQueryChange={setAddQuery}
+          onClose={() => setSearch({ add: undefined })}
+        />
+      )}
     </div>
   );
 }

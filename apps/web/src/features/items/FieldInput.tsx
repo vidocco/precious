@@ -172,12 +172,14 @@ export function FieldInput({
   onChange,
   error,
   users,
+  aside,
 }: {
   field: FieldDefinition;
   value: FormValue;
   onChange: (v: FormValue) => void;
   error?: string;
   users?: UserDto[];
+  aside?: React.ReactNode;
 }) {
   const id = useId();
   const label = (
@@ -309,6 +311,7 @@ export function FieldInput({
       help={field.help}
       error={error}
       htmlFor={id}
+      aside={aside}
       className={field.type === 'longtext' ? 'sm:col-span-2' : undefined}
     >
       {input}
