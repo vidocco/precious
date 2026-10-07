@@ -6,19 +6,23 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 
 ## Status
 
-Milestones 1 to 4 are done: a working household collection manager, the data source engine, adding items by searching data sources, and values kept up to date.
+Milestones 1 to 5 are done: a working household collection manager, the data source engine, adding items by searching data sources, values kept up to date, and the polish that makes it feel like an app.
 
 - First-run setup creates the admin; admins add the rest of the household.
 - Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
 - Collections are linked to a template and can be private, shared with the household or shared with a public link.
-- Items are added by hand with a cover image, shown as a wall or a table, filtered, sorted and searched (inside a collection or across all of them).
+- Items are added by hand with a cover image, shown as a wall, a **shelf** (spines sized by the template's rules: fixed, from fields such as pages and height, or by a field's value such as platform) or a table, filtered, sorted and searched (inside a collection or across all of them). Opening one morphs its cover into the item page.
 - **Data sources** (Data management → Data sources, admins only): REST, GraphQL and HTML sources with API key, bearer, basic or OAuth2 sign-in, encrypted secrets, default headers, rate limits and caching. Each endpoint has a method, parameters, headers, a body and a JSONata mapping, and can be tested in a console: run it, read the response, click keys to map them, or click elements in a web page to pick them out. Sources are shared as recipe files; presets for Open Library, AniList, IGDB and Wikipedia are included.
 
 - **Search to add**: a template's Data sources tab picks which searches find its items and which lookups fill in its fields, including lookups in other sources that find their own match (and ask you when it's unclear). It can be tried before saving. The **+** on a collection then searches; the picked result opens the item form filled in, with where each value came from. **Refresh** on an item looks it up again and never changes values edited by hand (those can be unlocked). Collections can skip the review with quick add.
 
 - **Keep up to date** (same tab): look a field up again on a schedule (every few hours, daily, weekly or monthly; a price, a rating) or calculate it from other fields with a formula (price per hour). Failed lookups keep the last good value, say why, and retry within the hour; values edited by hand are left alone. Every value is kept as history, charted on the item page and as a collection total.
 
-Next: polish and PWA (install, shelf view, view transitions, barcode scan, CSV import).
+- **Barcode scanning** in the add sheet: the camera reads an ISBN or EAN into the search (needs https, as browsers only share the camera over secure connections; USB scanners work anywhere).
+- **Import & export** (Data management): import a CSV into any collection with column matching and a preview; export each collection as CSV or JSON.
+- **Installable** as an app on phones and desktops (needs https). Precious stays online-only: your data is never cached on the device.
+
+Next: shipping it (the all-in-one Docker image with PostgreSQL, backups, GHCR releases and an Unraid template).
 
 ## Layout
 

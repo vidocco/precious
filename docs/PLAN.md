@@ -32,7 +32,7 @@ The repo `vidocco/precious` is empty (README, LICENSE, .gitignore). Work goes on
 | Images | sharp: thumbnails, WebP/AVIF, dominant-colour extraction | Covers stored locally (links rot); the dominant colour paints shelf spines |
 | Auth | Better Auth (Drizzle adapter), email+password, admin role | Sessions/cookies solved; no email server needed (admin resets passwords) |
 | Web | React 19 + Vite, TanStack Router + Query, **React Aria Components** (unstyled), Tailwind v4, Motion | Accessible primitives with no imposed look, so the design can be bespoke and not "shadcn default" |
-| PWA | vite-plugin-pwa (manifest, icons, app-shell SW, network-first) | Installable; online-only as decided |
+| PWA | Web app manifest + a small hand-written service worker (hashed assets cache-first, pages network-first, never `/api` or `/media`) | Installable; online-only as decided. No plugin: the worker is ~60 lines and can't go stale. |
 | Tests | Vitest, undici MockAgent fixtures, Testcontainers (Postgres), Playwright | See Verification |
 | Packaging | Multi-stage Dockerfile + **s6-overlay** supervising Postgres and Node; buildx amd64+arm64 → GHCR | s6 is the linuxserver.io convention Unraid users already know; clean shutdown protects Postgres |
 
@@ -56,7 +56,7 @@ A **template** describes one kind of collection and is managed under Data manage
 2. **Card layout:** three slots on the cover (top-left, top-right, bottom), each a field or empty, and one to four caption lines under it. Each line is one or more fields joined by " · ", with a style (title / normal / muted / value) and an optional prefix.
 3. **Item page layout:** the cover on the left and an **info box** on the right with the fields you pick; underneath, an ordered list of sections (field group, long text, list/table, value-history chart, extra images, links).
 4. **Collection header:** the figures shown above the wall (count, sum or average of a numeric field, "count where field = value", trend chart of a scheduled field).
-5. **Shelf sizing:** thickness, height and lean each have a mode. `fixed` (vinyl: every sleeve 0.4 × 31.4 cm); `from field` (books: thickness = pages × 0.05 mm + 3 mm, height = the "Height (cm)" field, with minimum, maximum and fallback); `rules` on another field (games: Switch → 1.1 × 17.0 cm, PS5 → 1.4 × 17.0 cm, otherwise a default). Lean is a condition (e.g. Status is Playing).
+5. **Shelf sizing:** thickness, height and lean each have a mode. `fixed` (vinyl: every sleeve 0.4 × 31.4 cm); `from field` (books: thickness = pages × 0.05 mm + 3 mm, height = the "Height (cm)" field, with minimum, maximum and fallback); `rules` on another field (games: Switch → 1.1 × 17.0 cm, PS5 → 1.4 × 17.0 cm, otherwise a default). Lean is a condition (e.g. Status is Playing). All sizes are stored in centimetres (`templates.shelf`); spines are packed into stacked shelves that fill the page width.
 6. **Data source bindings:** search providers, the enrichment pipeline and scheduled fields.
 
 ## Data model (core tables)
@@ -188,7 +188,7 @@ Render the templates (context: `query`, `item`, `refs`, `secrets`, `previous` st
 
 ## Add-item flow
 
-1. In a collection, **Add** opens a search sheet ("Search IGDB…"), debounced, showing result cards with covers. Optional barcode scan via the camera (BarcodeDetector API with a zxing fallback) for ISBN/EAN on books and vinyl.
+1. In a collection, **Add** opens a search sheet ("Search IGDB…"), debounced, showing result cards with covers. Optional barcode scan via the camera (BarcodeDetector API with a lazy-loaded zxing fallback) for ISBN/EAN on books and vinyl. Browsers only allow the camera over https, so on plain http the sheet explains that; USB scanners type into the search box.
 2. Picking a result runs the server's **enrichment pipeline**: each lookup step can use earlier outputs (`{{ previous.igdb.name }}`, `{{ refs.igdb }}`).
 3. **Match problem:** cross-source lookups by title are fuzzy (an HLTB search for "Zelda" gives 30 hits). Each step scores its candidates. Below a set score, the review screen shows a "pick the right match for HLTB" chooser. The chosen external ID is saved in `external_refs`, so later refreshes and computes use the ID, not the title.
 4. A **review screen** shows the pre-filled form with a per-field source badge. Edit, then save. A per-collection "quick add" toggle skips the review.
