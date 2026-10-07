@@ -281,6 +281,7 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .fld .help { font-size: 0.78rem; color: var(--ink-faint); }
 .text { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--wall); font-size: 0.93rem; min-width: 0; }
 .text input { border: 0; background: none; outline: none; flex: 1; min-width: 0; }
+.text > span:only-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text.focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent); }
 .text .faint { margin-left: auto; }
 .tpl-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
@@ -371,6 +372,28 @@ table.t tr:last-child td { border-bottom: 0; }
 .kind { font-size: 0.7rem; font-weight: 600; padding: 1px 7px; border-radius: 5px; background: var(--surface-sunk); }
 .ok-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
 .warn-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gilt); margin-right: 6px; }
+
+/* Source + request settings */
+.req-grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@container (min-width: 900px) { .req-grid { grid-template-columns: 1fr 1fr; } }
+.req-body { display: grid; gap: 14px; padding: 14px; }
+.row2 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@container (min-width: 560px) { .row2 { grid-template-columns: 1fr 1fr; } }
+.method-row { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.method { font-weight: 700; color: var(--accent); }
+table.kv { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+table.kv td { padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--wall); }
+table.kv tr:last-child td { border-bottom: 0; }
+table.kv td:first-child { width: 38%; font-weight: 600; border-right: 1px solid var(--line); }
+table.kv td.tpl-v { font-style: italic; }
+table.kv .add td { background: var(--surface); color: var(--accent); font-weight: 600; font-style: normal; }
+.secret { letter-spacing: 0.16em; color: var(--ink-muted); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.86rem; color: var(--ink-muted); }
+.toggle .sw { width: 30px; height: 18px; border-radius: 999px; background: var(--surface-sunk); border: 1px solid var(--line); position: relative; }
+.toggle .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink-faint); }
+.toggle.on .sw { background: var(--accent); border-color: var(--accent); }
+.toggle.on .sw::after { left: 14px; background: var(--accent-ink); }
+textarea.body { width: 100%; min-height: 84px; resize: vertical; font: inherit; font-size: 0.82rem; font-style: italic; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--wall); color: var(--ink); }
 
 /* Console */
 .console { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
@@ -883,7 +906,7 @@ pre.code { margin: 0; font-family: var(--font); font-size: 0.8rem; line-height: 
   <section class="screen" id="sources">
     <div class="screen-caption">
       <h2>10 · Data management: data sources</h2>
-      <p>The list of sources with their kind, which templates use them and whether the last call worked. Below, the console where you build and test one: run a sample, read the raw response, write the mapping, check the result. Switch the kind to see GraphQL and the HTML picker.</p>
+      <p>The list of sources with their kind, which templates use them and whether the last call worked. Below: the source's settings (address, auth, secrets, default headers), the endpoint's request (method, path, parameters, extra headers, body), and the console where you run it, read the response and write the mapping. Switch the kind to see GraphQL and HTML.</p>
     </div>
     <div class="frame" data-accent="ultramarine">
       <div data-topbar="data"></div>
@@ -906,6 +929,16 @@ pre.code { margin: 0; font-family: var(--font); font-size: 0.8rem; line-height: 
                   <tr><td><b>Record shop</b></td><td><span class="kind">HTML</span></td><td>Vinyl</td><td><span class="warn-dot"></span>Selector matched nothing · 1 h ago</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+          <div class="req-grid">
+            <div class="panel">
+              <div class="panel-h"><span class="caps" id="src-title">Source settings · IGDB</span><span class="faint" style="font-size:.78rem">Shared by every endpoint</span></div>
+              <div class="req-body" id="src-body"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-h"><span class="caps" id="req-title">Endpoint request · search</span><span class="faint" style="font-size:.78rem">Templates can use {{ query }}, {{ item.… }}, {{ secrets.… }}</span></div>
+              <div class="req-body" id="req-body"></div>
             </div>
           </div>
           <div class="console">
@@ -1311,8 +1344,57 @@ pre.code { margin: 0; font-family: var(--font); font-size: 0.8rem; line-height: 
       map: [['title', '{ css: "h1.release-title", value: text }'], ['year', '{ css: ".meta .year", regex: "(\\d{4})", as: number }'], ['tracks', '{ css: "table.tracklist tr", many: true }'], ['  · position', '{ css: "td:nth-child(1)" }'], ['  · name', '{ css: "td:nth-child(2)" }'], ['  · length', '{ xpath: "./td[3]/text()" }']],
       out: [[{ art: [['#2a3b55', '#c48a4a'], 'sun'] }, 'Low Tide Sermons', '1998 · 3 tracks', true]] }
   };
+  var CHEV = '<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>';
+  function sel(v) { return '<span class="select">' + v + CHEV + '</span>'; }
+  function kv(rows, addLabel) {
+    return '<table class="kv"><tbody>' + rows.map(function (r) {
+      return '<tr><td>' + esc(r[0]) + '</td><td class="' + (r[2] || 'tpl-v') + '">' + r[1] + '</td></tr>';
+    }).join('') + '<tr class="add"><td colspan="2">+ ' + addLabel + '</td></tr></tbody></table>';
+  }
+  function fld(label, inner) { return '<div class="fld"><span class="lbl">' + label + '</span>' + inner + '</div>'; }
+  function txt(v, cls) { return '<div class="text' + (cls ? ' ' + cls : '') + '"><span>' + v + '</span></div>'; }
+  var SRC = {
+    rest: { title: 'Source settings · IGDB', html:
+      fld('Base URL', txt('https://api.igdb.com/v4')) +
+      '<div class="row2">' + fld('Auth', sel('OAuth2 client credentials')) + fld('Token URL', txt('https://id.twitch.tv/oauth2/token')) + '</div>' +
+      fld('Secrets', kv([['clientId', 'u4x8…kq2 <span class="faint">(visible)</span>', 'x'], ['clientSecret', '<span class="secret">••••••••••••</span>', 'x']], 'Add secret')) +
+      fld('Default headers', kv([['Client-ID', esc('{{ secrets.clientId }}')], ['Authorization', '<span class="faint">Bearer token added by auth</span>', 'x']], 'Add header')) +
+      '<div class="row2">' + fld('Rate limit', txt('4 requests per second')) + fld('Cache results for', txt('7 days')) + '</div>' },
+    gql: { title: 'Source settings · Anime catalogue', html:
+      fld('Base URL', txt('https://graphql.example.org')) +
+      '<div class="row2">' + fld('Auth', sel('Bearer token')) + fld('Token', txt('<span class="secret">••••••••••••</span>')) + '</div>' +
+      fld('Default headers', kv([['Accept-Language', 'en']], 'Add header')) +
+      '<div class="row2">' + fld('Rate limit', txt('90 requests per minute')) + fld('Cache results for', txt('3 days')) + '</div>' },
+    html: { title: 'Source settings · Record shop', html:
+      fld('Base URL', txt('https://records.example.com')) +
+      '<div class="row2">' + fld('Auth', sel('None')) + fld('User-Agent', txt('Precious/1.0 (household collection)')) + '</div>' +
+      fld('Default headers', kv([['Accept-Language', 'es-ES,es;q=0.9'], ['Cookie', esc('consent=yes; {{ secrets.session }}')]], 'Add header')) +
+      '<div class="row2">' + fld('Rate limit', txt('1 request every 2 seconds')) + fld('Cache results for', txt('7 days')) + '</div>' }
+  };
+  var REQ = {
+    rest: { title: 'Endpoint request · search', html:
+      fld('Method and path', '<div class="method-row">' + sel('<span class="method">POST</span>') + txt('/games') + '</div><span class="help">GET · POST · PUT · PATCH · DELETE</span>') +
+      fld('Query parameters', kv([], 'Add parameter')) +
+      fld('Headers (added to the source’s)', kv([['Accept', 'application/json']], 'Add header')) +
+      fld('Body', '<div class="method-row">' + sel('Raw text') + '<span></span></div><textarea class="body" aria-label="Request body">search "{{ query | json_escape }}";\nfields name, first_release_date, cover.image_id, platforms.name;\nlimit 20;</textarea><span class="help">None · JSON · Form · Raw text</span>') },
+    gql: { title: 'Endpoint request · search', html:
+      fld('Method and path', '<div class="method-row">' + sel('<span class="method">POST</span>') + txt('/') + '</div>') +
+      '<span class="toggle"><span class="sw"></span>Send as GET (query in the URL)</span>' +
+      fld('Headers (added to the source’s)', kv([['Content-Type', 'application/json', 'x']], 'Add header')) +
+      fld('Query', '<textarea class="body" aria-label="GraphQL query">query ($search: String) {\n  Page(perPage: 20) { media(search: $search) { id title { english romaji } coverImage { large } startDate { year } } }\n}</textarea>') +
+      fld('Variables', '<textarea class="body" style="min-height:44px" aria-label="GraphQL variables">{ "search": "{{ query }}" }</textarea>') },
+    html: { title: 'Endpoint request · release page', html:
+      fld('Method and path', '<div class="method-row">' + sel('<span class="method">GET</span>') + txt(esc('/release/{{ refs.recordshop }}')) + '</div><span class="help">GET by default · POST with a form body for search pages that need it</span>') +
+      fld('Query parameters', kv([['format', 'vinyl']], 'Add parameter')) +
+      fld('Headers (added to the source’s)', kv([['Referer', 'https://records.example.com/search']], 'Add header')) +
+      fld('Body', '<div class="method-row">' + sel('None') + '<span></span></div>') }
+  };
   function renderKind(kind) {
     var k = K[kind];
+    document.getElementById('src-title').textContent = SRC[kind].title;
+    document.getElementById('src-body').innerHTML = SRC[kind].html;
+    document.getElementById('req-title').textContent = REQ[kind].title;
+    document.getElementById('req-body').innerHTML = REQ[kind].html;
     ['rest', 'gql', 'html'].forEach(function (n) { document.getElementById('kind-' + n).setAttribute('aria-pressed', String(n === kind)); });
     document.getElementById('ep-name').textContent = k.ep;
     document.getElementById('ep-status').textContent = k.st;

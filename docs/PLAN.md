@@ -95,6 +95,21 @@ endpoints:
       image:    "'https://images.igdb.com/igdb/image/upload/t_cover_big/' & cover.image_id & '.jpg'"
 ```
 
+### Request settings
+
+**On the source** (shared by all its endpoints):
+- **Base URL.**
+- **Auth:** none · API key (sent as a header or a query parameter, name configurable) · bearer token · basic (user + password) · OAuth2 client credentials (token URL, client ID, client secret; the token is fetched, cached and refreshed automatically).
+- **Default headers:** a key/value table. Values are templates, so `Client-ID: {{ secrets.clientId }}` works.
+- **Secrets:** named values stored encrypted (AES-256-GCM with `APP_SECRET`), shown masked after saving and never sent back to the browser.
+- **Rate limit** and default cache time.
+
+**On each endpoint:**
+- **Method:** GET · POST · PUT · PATCH · DELETE (REST). GraphQL sends POST with `{query, variables}` by default and can send GET (query in the URL) for APIs that require it. HTML pages use GET by default; POST with a form body is allowed for search pages that need it.
+- **Path** and **query parameters** (key/value table, values are templates).
+- **Headers:** added to the source's default headers; a header with the same name overrides the source's.
+- **Body type:** none · JSON · form (url-encoded) · raw text, written as a template. GraphQL uses its own query + variables editors instead.
+
 ### Three request kinds, one pipeline
 
 The core design rule is that **every kind turns its response into a JSON tree, then the same JSONata mapping and role validation run on it.** Templating, auth, rate limits, caching, the mapping console, the enrichment pipeline and computed fields all work the same whatever the source is.
