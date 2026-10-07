@@ -17,6 +17,7 @@ import type { Db } from '../db/client.ts';
 import { collections, images, items } from '../db/schema.ts';
 import { badRequest, notFound } from '../errors.ts';
 import { assertCanEditItems, loadCollection } from '../services/collections.ts';
+import { applyFormulas, syncComputed } from '../services/computed.ts';
 import {
   buildSearchText,
   fieldExpr,
@@ -123,6 +124,13 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
         ...Object.keys(data),
         ...(found ? ['$title', ...(req.body.coverImageId ? ['$cover'] : [])] : []),
       ];
+      // Values typed by hand on an item found in a data source are locked, so refreshing keeps them.
+      const calculated = await applyFormulas(
+        template,
+        req.body.title,
+        data,
+        writeMeta({}, written, { sources: req.body.sources, userId: viewer.id, lock: found }),
+      );
 
       const created = await db.transaction(async (tx) => {
         // Taking the next number locks the collection row, so numbers never repeat.
@@ -140,17 +148,19 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
             accessionNo,
             title: req.body.title,
             coverImageId: req.body.coverImageId ?? null,
-            data,
+            data: calculated.data,
             externalRefs: refs,
-            // Values typed by hand on an item found in a data source are locked, so refreshing keeps them.
-            fieldMeta: writeMeta({}, written, { sources: req.body.sources, userId: viewer.id, lock: found }),
-            searchText: buildSearchText({ title: req.body.title, accession, data }, template.fields),
+            fieldMeta: calculated.meta,
+            searchText: buildSearchText({ title: req.body.title, accession, data: calculated.data }, template.fields),
             createdBy: viewer.id,
             updatedBy: viewer.id,
           })
           .returning();
         return row as ItemRow;
       });
+      // Scheduled values set to run on add are looked up right away.
+      await syncComputed(db, template.id, { itemIds: [created.id] });
+      ctx.scheduler.poke();
       const [full] = await selectItems(db).where(eq(items.id, created.id));
       if (!full) throw notFound('Item');
       return reply.code(201).send(itemDto(full.item, collection.accessionPrefix, full.cover, full.createdByName));
@@ -246,15 +256,21 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
       if (title !== row.item.title) changed.push('$title');
       if (coverImageId !== undefined && coverImageId !== row.item.coverImageId) changed.push('$cover');
       const accession = formatAccession(row.collection.accessionPrefix, row.item.accessionNo);
+      const calculated = await applyFormulas(
+        row.template,
+        title,
+        data,
+        writeMeta(meta, changed, { sources, userId: viewer.id, lock: true, unlock: req.body.unlock }),
+      );
       await db
         .update(items)
         .set({
           title,
-          data,
+          data: calculated.data,
           ...(coverImageId !== undefined && { coverImageId }),
           ...(req.body.externalRefs && { externalRefs: { ...row.item.externalRefs, ...req.body.externalRefs } }),
-          fieldMeta: writeMeta(meta, changed, { sources, userId: viewer.id, lock: true, unlock: req.body.unlock }),
-          searchText: buildSearchText({ title, accession, data }, fields),
+          fieldMeta: calculated.meta,
+          searchText: buildSearchText({ title, accession, data: calculated.data }, fields),
           updatedBy: viewer.id,
         })
         .where(eq(items.id, row.item.id));

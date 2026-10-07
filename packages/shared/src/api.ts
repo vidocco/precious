@@ -158,6 +158,9 @@ export interface FieldMeta {
   step?: string;
   /** For the cover: where it was downloaded from. */
   url?: string;
+  /** For a value kept up to date: why the last update failed (the value shown is the last good one). */
+  error?: string;
+  errorAt?: string;
   locked?: boolean;
   by?: string;
   at?: string;

@@ -4,6 +4,7 @@ import type { SessionUser } from '../auth/auth.ts';
 import type { Db } from '../db/client.ts';
 import { dataSources, endpoints, templates } from '../db/schema.ts';
 import { notFound } from '../errors.ts';
+import { boundEndpointIds } from './pipeline.ts';
 
 export type SourceRow = typeof dataSources.$inferSelect;
 export type EndpointRow = typeof endpoints.$inferSelect;
@@ -77,10 +78,7 @@ export async function sourceUsage(db: Db): Promise<Map<string, SourceDto['usedBy
   const sourceOf = new Map(eps.map((e) => [e.id, e.sourceId]));
   const out = new Map<string, SourceDto['usedBy']>();
   for (const t of tpls) {
-    const ids = [
-      ...t.bindings.search.map((p) => p.endpointId),
-      ...t.bindings.steps.flatMap((s) => [s.endpointId, ...(s.match ? [s.match.endpointId] : [])]),
-    ];
+    const ids = boundEndpointIds(t.bindings);
     for (const sid of new Set(ids.map((id) => sourceOf.get(id)).filter((x): x is string => !!x))) {
       const list = out.get(sid) ?? [];
       list.push({ templateId: t.id, name: t.name });

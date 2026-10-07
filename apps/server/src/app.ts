@@ -17,6 +17,7 @@ import type { AppContext } from './context.ts';
 import { HttpError } from './errors.ts';
 import { authRoutes } from './routes/auth.ts';
 import { collectionRoutes } from './routes/collections.ts';
+import { computedRoutes } from './routes/computed.ts';
 import { healthRoutes } from './routes/health.ts';
 import { imageRoutes } from './routes/images.ts';
 import { itemRoutes } from './routes/items.ts';
@@ -79,6 +80,7 @@ export async function buildApp(ctx: AppContext, options: FastifyServerOptions = 
   await app.register(publicRoutes, ctx);
   await app.register(sourceRoutes, ctx);
   await app.register(lookupRoutes, ctx);
+  await app.register(computedRoutes, ctx);
 
   const webDist = ctx.config.WEB_DIST_DIR ? resolve(ctx.config.WEB_DIST_DIR) : undefined;
   if (webDist && existsSync(webDist)) {

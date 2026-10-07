@@ -7,6 +7,7 @@ import { createRuntime } from './connectors/runner.ts';
 import { createDb } from './db/client.ts';
 import { runMigrations } from './db/migrate.ts';
 import { seedStarterTemplates } from './db/seed.ts';
+import { Scheduler, syncAllComputed } from './services/computed.ts';
 import { pruneImages } from './services/remoteImages.ts';
 
 const config = loadConfig();
@@ -19,7 +20,11 @@ await pruneCache(database.db);
 
 const auth = createAuth(database.db, config);
 const connectors = createRuntime(database.db, config.APP_SECRET);
-const app = await buildApp({ config, database, auth, connectors }, { logger: { level: config.LOG_LEVEL } });
+// The error handler runs only once started, after the app exists.
+const scheduler = new Scheduler({ db: database.db, rt: connectors }, (err) =>
+  app.log.warn({ err }, 'scheduled lookups failed'),
+);
+const app = await buildApp({ config, database, auth, connectors, scheduler }, { logger: { level: config.LOG_LEVEL } });
 if (seeded) app.log.info({ seeded }, 'added starter templates');
 
 // Covers no item uses (replaced, removed, or found for an item never saved) are cleared daily.
@@ -35,8 +40,13 @@ await sweepImages();
 const sweep = setInterval(() => void sweepImages(), 24 * 3600_000);
 sweep.unref();
 
+// Values kept up to date: catch up with any settings changed while stopped, then check every minute.
+await syncAllComputed(database.db);
+scheduler.start();
+
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down');
+  scheduler.stop();
   await app.close();
   await database.close();
   process.exit(0);

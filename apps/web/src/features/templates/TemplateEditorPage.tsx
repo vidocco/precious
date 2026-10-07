@@ -1,4 +1,10 @@
-import { type FieldDefinition, type TemplateData, type TemplateDto, templateInputSchema } from '@precious/shared';
+import {
+  EMPTY_BINDINGS,
+  type FieldDefinition,
+  type TemplateData,
+  type TemplateDto,
+  templateInputSchema,
+} from '@precious/shared';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { ApiError, errorMessage } from '../../api/client.ts';
@@ -13,7 +19,8 @@ const TABS = ['Fields', 'Card', 'Item page', 'Collection header', 'Shelf', 'Data
 type Tab = (typeof TABS)[number];
 
 function toData(t: TemplateDto): TemplateData {
-  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings } = t;
+  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header } = t;
+  const bindings = { ...EMPTY_BINDINGS, ...t.bindings };
   return structuredClone({ name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings });
 }
 
@@ -52,6 +59,7 @@ function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
         };
         return { ...s, fill: pruneFill(s.fill, ok), ...(match && { match }) };
       }),
+      computed: t.bindings.computed.filter((c) => ids.has(c.field)),
     },
   };
 }

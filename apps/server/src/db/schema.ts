@@ -15,6 +15,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -90,7 +91,7 @@ export const templates = pgTable('templates', {
   card: jsonb('card').$type<TemplateData['card']>().notNull(),
   itemLayout: jsonb('item_layout').$type<TemplateData['itemLayout']>().notNull(),
   header: jsonb('header').$type<TemplateData['header']>().notNull(),
-  bindings: jsonb('bindings').$type<Bindings>().notNull().default({ search: [], steps: [] }),
+  bindings: jsonb('bindings').$type<Bindings>().notNull().default({ search: [], steps: [], computed: [] }),
   /** Shelf sizing rules arrive with the shelf view. */
   shelf: jsonb('shelf'),
   createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
@@ -229,3 +230,38 @@ export const httpCache = pgTable('http_cache', {
   body: text('body').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 });
+
+// ---------------------------------------------------------------- values kept up to date
+
+/** One row per item and field looked up on a schedule: when it runs next. */
+export const computedState = pgTable(
+  'computed_state',
+  {
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
+    field: text('field').notNull(),
+    /** The schedule the next run was worked out from; a changed schedule reschedules. */
+    scheduleKey: text('schedule_key').notNull(),
+    nextRunAt: timestamp('next_run_at', { withTimezone: true }).notNull(),
+    lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+    /** Failed runs in a row; the reason is in the item's field_meta. */
+    failures: integer('failures').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.field] }), index('computed_state_next_idx').on(t.nextRunAt)],
+);
+
+/** Every value looked up, for history and charts. */
+export const computedValues = pgTable(
+  'computed_values',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
+    field: text('field').notNull(),
+    value: jsonb('value').notNull(),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('computed_values_item_idx').on(t.itemId, t.field, t.at)],
+);

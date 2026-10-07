@@ -68,6 +68,22 @@
           "openlibrary": "/works/OL59800W"
         }
       }
+    },
+    {
+      "key": "rating",
+      "name": "Average rating",
+      "role": "compute",
+      "kind": "rest",
+      "method": "GET",
+      "path": "{{ refs.openlibrary }}/ratings.json",
+      "map": {
+        "value": "summary.average ? $round(summary.average, 2)"
+      },
+      "sample": {
+        "refs": {
+          "openlibrary": "/works/OL59800W"
+        }
+      }
     }
   ]
 }

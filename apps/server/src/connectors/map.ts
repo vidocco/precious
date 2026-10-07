@@ -22,6 +22,16 @@ function compile(text: string, key: string): jsonata.Expression {
   return expr;
 }
 
+/** Why an expression can't be read, or null when it can. */
+export function expressionError(text: string, key: string): string | null {
+  try {
+    compile(text, key);
+    return null;
+  } catch (err) {
+    return (err as Error).message;
+  }
+}
+
 export async function evaluate(text: string, input: unknown, key: string): Promise<unknown> {
   const expr = compile(text, key);
   try {

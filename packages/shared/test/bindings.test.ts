@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   bindingsSchema,
   coerceToField,
+  describeSchedule,
   type FieldDefinition,
   fieldSchema,
   matchScore,
+  nextRun,
   normalizeTitle,
   STARTER_TEMPLATES,
   suggestFill,
@@ -138,5 +140,43 @@ describe('bindings', () => {
       'bindings.search.0.fill.nope',
       'bindings.steps.0.match.yearField',
     ]);
+  });
+});
+
+describe('schedules', () => {
+  // Local times, so the tests hold in any time zone.
+  const d = (y: number, mo: number, day: number, h = 0, mi = 0) => new Date(y, mo - 1, day, h, mi);
+
+  it('finds the next daily, weekly and monthly run', () => {
+    expect(nextRun({ every: 'day', at: '04:00' }, d(2026, 10, 7, 3, 59))).toEqual(d(2026, 10, 7, 4));
+    expect(nextRun({ every: 'day', at: '04:00' }, d(2026, 10, 7, 4))).toEqual(d(2026, 10, 8, 4));
+    // 7 October 2026 is a Wednesday.
+    expect(nextRun({ every: 'week', day: 1, at: '09:30' }, d(2026, 10, 7, 12))).toEqual(d(2026, 10, 12, 9, 30));
+    expect(nextRun({ every: 'week', day: 3, at: '09:30' }, d(2026, 10, 7, 12))).toEqual(d(2026, 10, 14, 9, 30));
+    expect(nextRun({ every: 'week', day: 3, at: '13:00' }, d(2026, 10, 7, 12))).toEqual(d(2026, 10, 7, 13));
+    expect(nextRun({ every: 'month', day: 1, at: '00:00' }, d(2026, 12, 15))).toEqual(d(2027, 1, 1));
+    expect(nextRun({ every: 'month', day: 20, at: '06:00' }, d(2026, 1, 15))).toEqual(d(2026, 1, 20, 6));
+  });
+
+  it('runs every few hours on the hour, from midnight', () => {
+    expect(nextRun({ every: 'hours', n: 6 }, d(2026, 10, 7, 7, 15))).toEqual(d(2026, 10, 7, 12));
+    expect(nextRun({ every: 'hours', n: 6 }, d(2026, 10, 7, 18))).toEqual(d(2026, 10, 8, 0));
+    expect(nextRun({ every: 'hours', n: 1 }, d(2026, 10, 7, 7, 15))).toEqual(d(2026, 10, 7, 8));
+  });
+
+  it('describes schedules', () => {
+    expect(describeSchedule({ every: 'month', day: 22, at: '04:00' })).toBe('On the 22nd of every month at 04:00');
+    expect(describeSchedule({ every: 'week', day: 0, at: '04:00' })).toBe('Every Sunday at 04:00');
+    expect(describeSchedule({ every: 'hours', n: 1 })).toBe('Every hour');
+  });
+
+  it('rejects a field kept up to date twice', () => {
+    const r = bindingsSchema.safeParse({
+      computed: [
+        { kind: 'formula', field: 'a', formula: 'b * 2' },
+        { kind: 'source', field: 'a', endpointId: ID },
+      ],
+    });
+    expect(r.error?.issues.map((i) => i.path.join('.'))).toEqual(['computed.1.field']);
   });
 });

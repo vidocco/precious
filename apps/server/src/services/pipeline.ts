@@ -13,6 +13,7 @@ import {
   type StepReport,
 } from '@precious/shared';
 import { eq, inArray } from 'drizzle-orm';
+import { expressionError } from '../connectors/map.ts';
 import { type ConnectorRuntime, runEndpoint } from '../connectors/runner.ts';
 import { render } from '../connectors/template.ts';
 import type { Db } from '../db/client.ts';
@@ -36,14 +37,20 @@ const MAX_CANDIDATES = 5;
 /** The top match must lead the next one by this much to be picked without asking. */
 const CLEAR_LEAD = 0.05;
 
-/** Loads every endpoint the bindings use, with its source, in one query. */
-export async function loadBound(db: Db, bindings: Bindings): Promise<Map<string, Bound>> {
-  const ids = [
+/** Every endpoint the bindings use: searches, lookups, match searches and scheduled values. */
+export function boundEndpointIds(bindings: Bindings): string[] {
+  return [
     ...new Set([
       ...bindings.search.map((p) => p.endpointId),
       ...bindings.steps.flatMap((s) => [s.endpointId, ...(s.match ? [s.match.endpointId] : [])]),
+      ...(bindings.computed ?? []).flatMap((c) => (c.kind === 'source' ? [c.endpointId] : [])),
     ]),
   ];
+}
+
+/** Loads every endpoint the bindings use, with its source, in one query. */
+export async function loadBound(db: Db, bindings: Bindings): Promise<Map<string, Bound>> {
+  const ids = boundEndpointIds(bindings);
   if (ids.length === 0) return new Map();
   const rows = await db
     .select({ endpoint: endpoints, source: dataSources })
@@ -70,6 +77,13 @@ export async function bindingIssues(db: Db, bindings: Bindings) {
     check(s.endpointId, 'lookup', `bindings.steps.${i}.endpointId`);
     if (s.match) check(s.match.endpointId, 'search', `bindings.steps.${i}.match.endpointId`);
   });
+  for (const [i, c] of bindings.computed.entries()) {
+    if (c.kind === 'source') check(c.endpointId, 'compute', `bindings.computed.${i}.endpointId`);
+    else {
+      const error = expressionError(c.formula, 'formula');
+      if (error) issues.push({ path: `bindings.computed.${i}.formula`, message: error });
+    }
+  }
   return issues;
 }
 

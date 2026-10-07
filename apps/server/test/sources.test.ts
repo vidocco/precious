@@ -41,6 +41,8 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
         res.setHeader('content-type', 'application/json');
         res.end(fixture('ol-work.json'));
       },
+      '/works/OL59800W/ratings.json': (_req, res) =>
+        json(res, { summary: { average: 4.486486486486487, count: 37 }, counts: { '5': 24 } }),
       '/w/index.php': (_req, res) => {
         res.setHeader('content-type', 'text/html');
         res.end(fixture('wiki-search.html'));
@@ -139,6 +141,9 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
       ],
       first_published: '1969',
     });
+    const rating = await run(source, 'rating', { refs: { openlibrary: '/works/OL59800W' } });
+    expect(rating.errors).toEqual([]);
+    expect(rating.output).toBe(4.49);
   });
 
   it('runs the AniList preset (GraphQL)', async () => {

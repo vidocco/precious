@@ -49,10 +49,45 @@ export const enrichStepSchema = z.object({
 });
 export type EnrichStep = z.output<typeof enrichStepSchema>;
 
+// ---------------------------------------------------------------- values kept up to date
+
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 04:00');
+
+/** When a value is looked up again. Times are the server's local time. */
+export const scheduleSchema = z.discriminatedUnion('every', [
+  z.object({ every: z.literal('hours'), n: z.number().int().min(1).max(24) }),
+  z.object({ every: z.literal('day'), at: timeSchema }),
+  z.object({ every: z.literal('week'), day: z.number().int().min(0).max(6), at: timeSchema }),
+  z.object({ every: z.literal('month'), day: z.number().int().min(1).max(28), at: timeSchema }),
+]);
+export type Schedule = z.output<typeof scheduleSchema>;
+
+export const DEFAULT_SCHEDULE: Schedule = { every: 'day', at: '04:00' };
+
+export const computedFieldSchema = z.discriminatedUnion('kind', [
+  /** Looked up in a data source (a compute endpoint) on a schedule, e.g. a daily price. */
+  z.object({
+    kind: z.literal('source'),
+    field: z.string(),
+    endpointId: z.string().uuid(),
+    schedule: scheduleSchema.default(DEFAULT_SCHEDULE),
+    /** Also look it up as soon as an item is added. */
+    runOnCreate: z.boolean().default(true),
+  }),
+  /** Calculated from the item's other values with a JSONata formula, whenever it changes. */
+  z.object({
+    kind: z.literal('formula'),
+    field: z.string(),
+    formula: z.string().trim().min(1, 'Write a formula').max(2000),
+  }),
+]);
+export type ComputedField = z.output<typeof computedFieldSchema>;
+
 export const bindingsSchema = z
   .object({
     search: z.array(searchProviderSchema).max(8).default([]),
     steps: z.array(enrichStepSchema).max(12).default([]),
+    computed: z.array(computedFieldSchema).max(20).default([]),
   })
   .superRefine((b, ctx) => {
     const ids = new Set<string>();
@@ -73,11 +108,21 @@ export const bindingsSchema = z
         });
       }
     });
+    const computed = new Set<string>();
+    b.computed.forEach((c, i) => {
+      if (computed.has(c.field))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['computed', i, 'field'],
+          message: 'This field is already kept up to date',
+        });
+      computed.add(c.field);
+    });
   });
 export type Bindings = z.output<typeof bindingsSchema>;
 export type BindingsInput = z.input<typeof bindingsSchema>;
 
-export const EMPTY_BINDINGS: Bindings = { search: [], steps: [] };
+export const EMPTY_BINDINGS: Bindings = { search: [], steps: [], computed: [] };
 
 /** Checks fill targets and year fields against a template's field ids (used by templateInputSchema). */
 export function bindingTargetIssues(
@@ -102,7 +147,111 @@ export function bindingTargetIssues(
       });
     }
   });
+  b.computed.forEach((c, i) => {
+    if (!fieldIds.has(c.field))
+      issues.push({ path: ['bindings', 'computed', i, 'field'], message: `Unknown field "${c.field}"` });
+  });
   return issues;
+}
+
+// ---------------------------------------------------------------- schedules
+
+const at = (d: Date, hm: string) => {
+  const [h, m] = hm.split(':').map(Number);
+  const out = new Date(d);
+  out.setHours(h ?? 0, m ?? 0, 0, 0);
+  return out;
+};
+
+/** The first time after `from` that the schedule runs, in the local time zone. */
+export function nextRun(s: Schedule, from: Date): Date {
+  switch (s.every) {
+    case 'hours': {
+      // On the hour, aligned to midnight: every 6 hours runs at 00:00, 06:00, 12:00 and 18:00.
+      const t = new Date(from);
+      t.setMinutes(0, 0, 0);
+      do t.setHours(t.getHours() + 1);
+      while (t.getHours() % s.n !== 0);
+      return t;
+    }
+    case 'day': {
+      const t = at(from, s.at);
+      if (t <= from) t.setDate(t.getDate() + 1);
+      return at(t, s.at);
+    }
+    case 'week': {
+      const t = at(from, s.at);
+      let days = (s.day - t.getDay() + 7) % 7;
+      if (days === 0 && t <= from) days = 7;
+      t.setDate(t.getDate() + days);
+      return at(t, s.at);
+    }
+    case 'month': {
+      const t = at(from, s.at);
+      t.setDate(s.day);
+      if (t <= from) t.setMonth(t.getMonth() + 1, s.day);
+      return at(t, s.at);
+    }
+  }
+}
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const ordinal = (n: number) =>
+  `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+
+export function describeSchedule(s: Schedule): string {
+  switch (s.every) {
+    case 'hours':
+      return s.n === 1 ? 'Every hour' : `Every ${s.n} hours`;
+    case 'day':
+      return `Every day at ${s.at}`;
+    case 'week':
+      return `Every ${DAYS[s.day]} at ${s.at}`;
+    case 'month':
+      return `On the ${ordinal(s.day)} of every month at ${s.at}`;
+  }
+}
+
+/** Identifies a schedule, so a changed schedule can be noticed. */
+export const scheduleKey = (s: Schedule) => JSON.stringify(s, Object.keys(s).sort());
+
+// ---------------------------------------------------------------- status and history
+
+export interface ComputedStatus {
+  field: string;
+  items: number;
+  /** Items whose last lookup failed. */
+  failing: number;
+  /** Items not looked up yet. */
+  waiting: number;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  /** The most recent error, if any. */
+  lastError: string | null;
+}
+
+export interface HistoryPoint {
+  /** YYYY-MM-DD */
+  day: string;
+  total: number;
+  items: number;
+}
+
+export interface ItemHistoryPoint {
+  at: string;
+  value: unknown;
+}
+
+export const formulaTrySchema = z.object({
+  formula: z.string().trim().min(1).max(2000),
+  data: z.record(z.string(), z.unknown()).default({}),
+  title: z.string().max(300).default(''),
+});
+export type FormulaTryInput = z.input<typeof formulaTrySchema>;
+
+export interface FormulaTryResult {
+  value?: unknown;
+  error?: string;
 }
 
 // ---------------------------------------------------------------- matching

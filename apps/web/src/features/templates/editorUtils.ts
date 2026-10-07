@@ -105,5 +105,5 @@ export const EMPTY_TEMPLATE: TemplateData = {
   card: { slots: { tl: null, tr: '$accession', b: null }, lines: [{ fields: ['$title'], style: 'title' }] },
   itemLayout: { info: ['$added'], sections: [] },
   header: { figures: [{ id: 'count', kind: 'count', label: 'Items' }] },
-  bindings: { search: [], steps: [] },
+  bindings: { search: [], steps: [], computed: [] },
 };

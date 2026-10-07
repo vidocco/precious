@@ -9,6 +9,7 @@ import type { AppContext } from '../context.ts';
 import { collections, templates, user } from '../db/schema.ts';
 import { badRequest, forbidden, HttpError, notFound } from '../errors.ts';
 import { type TemplateRow, templateData } from '../services/collections.ts';
+import { recalculateTemplate, syncComputed } from '../services/computed.ts';
 import { reindexCollections } from '../services/items.ts';
 import { bindingIssues } from '../services/pipeline.ts';
 
@@ -117,6 +118,10 @@ export const templateRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx
         .from(collections)
         .where(eq(collections.templateId, before.id));
       await reindexCollections(db, using, req.body.fields);
+      // Formulas and schedules may have changed.
+      await recalculateTemplate(db, before.id);
+      await syncComputed(db, before.id);
+      ctx.scheduler.poke();
       const usage = await usageFor([before.id], viewer);
       return toDto(t as TemplateRow, usage.get(before.id) ?? [], viewer);
     },

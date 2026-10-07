@@ -10,6 +10,7 @@ import { createRuntime } from '../src/connectors/runner.ts';
 import { createDb, type Database } from '../src/db/client.ts';
 import { runMigrations } from '../src/db/migrate.ts';
 import { seedStarterTemplates } from '../src/db/seed.ts';
+import { Scheduler } from '../src/services/computed.ts';
 
 export const TEST_DATABASE_URL = process.env.DATABASE_URL;
 
@@ -17,6 +18,7 @@ export interface TestServer {
   app: App;
   database: Database;
   config: Config;
+  connectors: ReturnType<typeof createRuntime>;
   close: () => Promise<void>;
 }
 
@@ -47,13 +49,16 @@ export async function startTestServer(): Promise<TestServer> {
   await seedStarterTemplates(database.db);
   const auth = createAuth(database.db, config);
   const connectors = createRuntime(database.db, config.APP_SECRET);
-  const app = await buildApp({ config, database, auth, connectors }, { logger: false });
+  // Never started: tests run due lookups themselves.
+  const scheduler = new Scheduler({ db: database.db, rt: connectors });
+  const app = await buildApp({ config, database, auth, connectors, scheduler }, { logger: false });
   await app.ready();
 
   return {
     app,
     database,
     config,
+    connectors,
     async close() {
       await app.close();
       await database.close();

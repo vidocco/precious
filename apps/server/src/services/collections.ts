@@ -1,4 +1,4 @@
-import type { CollectionDto, FieldDefinition, TemplateData } from '@precious/shared';
+import { type CollectionDto, EMPTY_BINDINGS, type FieldDefinition, type TemplateData } from '@precious/shared';
 import { eq, sql } from 'drizzle-orm';
 import { canEditItems, canManageCollection, canView } from '../auth/access.ts';
 import type { SessionUser } from '../auth/auth.ts';
@@ -73,7 +73,8 @@ export function templateData(t: TemplateRow): TemplateData {
     card: t.card,
     itemLayout: t.itemLayout,
     header: t.header,
-    bindings: t.bindings,
+    // Rows saved before a part of the bindings existed get it empty.
+    bindings: { ...EMPTY_BINDINGS, ...t.bindings },
   };
 }
 
