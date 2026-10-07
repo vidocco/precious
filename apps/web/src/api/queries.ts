@@ -3,15 +3,23 @@ import type {
   CollectionInput,
   CollectionUpdate,
   CreateUserInput,
+  EndpointDto,
+  EndpointInput,
   FigureValue,
   ItemDto,
   ItemInput,
   ItemListQuery,
   ItemListResponse,
   ItemUpdate,
+  PresetDto,
+  RunRequest,
+  RunResult,
   SearchResponse,
+  SecretsUpdate,
   SetupInput,
   SetupStatus,
+  SourceDto,
+  SourceInput,
   TemplateDto,
   TemplateInput,
   UpdateUserInput,
@@ -224,3 +232,100 @@ export const useSearch = (q: string) =>
 
 export const usePublicCollection = (slug: string) =>
   useQuery({ queryKey: keys.public(slug), queryFn: () => api.get<PublicCollection>(`/api/public/${slug}`) });
+
+// ---------------------------------------------------------------- data sources
+
+export const sourceKeys = {
+  all: ['sources'] as const,
+  one: (id: string) => ['sources', id] as const,
+  presets: ['presets'] as const,
+};
+
+export const useSources = () =>
+  useQuery({ queryKey: sourceKeys.all, queryFn: () => api.get<SourceDto[]>('/api/sources') });
+
+export const useSource = (id: string) =>
+  useQuery({ queryKey: sourceKeys.one(id), queryFn: () => api.get<SourceDto>(`/api/sources/${id}`), enabled: !!id });
+
+export const usePresets = () =>
+  useQuery({
+    queryKey: sourceKeys.presets,
+    queryFn: () => api.get<PresetDto[]>('/api/recipes/presets'),
+    staleTime: Infinity,
+  });
+
+export interface InstalledRecipe {
+  source: SourceDto;
+  missingSecrets: string[];
+}
+
+export function useSourceMutations() {
+  const qc = useQueryClient();
+  const done = (s?: SourceDto) => {
+    qc.invalidateQueries({ queryKey: sourceKeys.all });
+    if (s) qc.setQueryData(sourceKeys.one(s.id), s);
+  };
+  return {
+    create: useMutation({ mutationFn: (s: SourceInput) => api.post<SourceDto>('/api/sources', s), onSuccess: done }),
+    update: useMutation({
+      mutationFn: ({ id, ...s }: SourceInput & { id: string }) => api.put<SourceDto>(`/api/sources/${id}`, s),
+      onSuccess: done,
+    }),
+    setSecrets: useMutation({
+      mutationFn: ({ id, secrets }: { id: string; secrets: SecretsUpdate }) =>
+        api.put<SourceDto>(`/api/sources/${id}/secrets`, secrets),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api.del(`/api/sources/${id}`),
+      onSuccess: (_r, id) => {
+        qc.removeQueries({ queryKey: sourceKeys.one(id) });
+        qc.invalidateQueries({ queryKey: sourceKeys.all });
+      },
+    }),
+    importRecipe: useMutation({
+      mutationFn: (recipe: unknown) => api.post<InstalledRecipe>('/api/sources/import', recipe),
+      onSuccess: (r) => done(r.source),
+    }),
+    installPreset: useMutation({
+      mutationFn: (key: string) => api.post<InstalledRecipe>(`/api/recipes/presets/${key}/install`),
+      onSuccess: (r) => done(r.source),
+    }),
+  };
+}
+
+export function useEndpointMutations(sourceId: string) {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: sourceKeys.one(sourceId) });
+    qc.invalidateQueries({ queryKey: sourceKeys.all });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (e: EndpointInput) => api.post<EndpointDto>(`/api/sources/${sourceId}/endpoints`, e),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, ...e }: EndpointInput & { id: string }) => api.put<EndpointDto>(`/api/endpoints/${id}`, e),
+      onSuccess: done,
+    }),
+    remove: useMutation({ mutationFn: (id: string) => api.del(`/api/endpoints/${id}`), onSuccess: done }),
+    run: useMutation({
+      mutationFn: (r: RunRequest) => api.post<RunResult>(`/api/sources/${sourceId}/run`, r),
+      // Runs update the source's last call.
+      onSuccess: () => qc.invalidateQueries({ queryKey: sourceKeys.all }),
+    }),
+  };
+}
+
+/** Downloads a source as a recipe file. */
+export async function downloadRecipe(source: Pick<SourceDto, 'id' | 'name'>) {
+  const recipe = await api.get<unknown>(`/api/sources/${source.id}/export`);
+  const blob = new Blob([JSON.stringify(recipe, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${source.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'source'}.precious.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

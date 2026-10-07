@@ -16,11 +16,20 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: 'node apps/server/scripts/e2e-server.ts',
-    url: `http://localhost:${PORT}/api/health`,
-    reuseExistingServer: false,
-    timeout: 60_000,
-    env: { E2E_PORT: String(PORT) },
-  },
+  webServer: [
+    {
+      // Stands in for remote APIs and websites, so tests never touch the internet.
+      command: 'node e2e/mock-api.ts',
+      url: 'http://127.0.0.1:3401/health',
+      reuseExistingServer: false,
+      env: { MOCK_PORT: '3401' },
+    },
+    {
+      command: 'node apps/server/scripts/e2e-server.ts',
+      url: `http://localhost:${PORT}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { E2E_PORT: String(PORT) },
+    },
+  ],
 });

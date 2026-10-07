@@ -8,7 +8,7 @@ import { LoginPage } from '../features/auth/LoginPage.tsx';
 import { SetupPage } from '../features/auth/SetupPage.tsx';
 import { CollectionFormPage } from '../features/collections/CollectionFormPage.tsx';
 import { CollectionPage } from '../features/collections/CollectionPage.tsx';
-import { DataLayout, ImportExportPage, SourcesPage } from '../features/data/DataLayout.tsx';
+import { DataLayout, ImportExportPage } from '../features/data/DataLayout.tsx';
 import { CollectionsIndexPage, HomePage } from '../features/home/HomePage.tsx';
 import { ItemFormPage } from '../features/items/ItemFormPage.tsx';
 import { ItemPage } from '../features/items/ItemPage.tsx';
@@ -17,6 +17,9 @@ import { ServerPage } from '../features/server/ServerPage.tsx';
 import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { AppShell } from '../features/shell/AppShell.tsx';
 import { SearchPage } from '../features/shell/SearchPage.tsx';
+import { EndpointPage } from '../features/sources/EndpointPage.tsx';
+import { SourcePage } from '../features/sources/SourcePage.tsx';
+import { SourcesListPage } from '../features/sources/SourcesListPage.tsx';
 import { TemplateEditorPage } from '../features/templates/TemplateEditorPage.tsx';
 import { TemplatesListPage } from '../features/templates/TemplatesListPage.tsx';
 
@@ -144,7 +147,23 @@ const templateRoute = createRoute({
   path: '/templates/$templateId',
   component: () => <TemplateEditorPage mode="edit" />,
 });
-const sourcesRoute = createRoute({ getParentRoute: () => dataRoute, path: '/sources', component: SourcesPage });
+const sourcesRoute = createRoute({ getParentRoute: () => dataRoute, path: '/sources', component: SourcesListPage });
+const newSourceRoute = createRoute({
+  getParentRoute: () => dataRoute,
+  path: '/sources/new',
+  component: () => <SourcePage mode="create" />,
+});
+const sourceRoute = createRoute({
+  getParentRoute: () => dataRoute,
+  path: '/sources/$sourceId',
+  validateSearch: z.object({ missing: z.string().optional() }),
+  component: () => <SourcePage mode="edit" />,
+});
+const endpointRoute = createRoute({
+  getParentRoute: () => dataRoute,
+  path: '/sources/$sourceId/e/$endpointId',
+  component: EndpointPage,
+});
 const importRoute = createRoute({ getParentRoute: () => dataRoute, path: '/import', component: ImportExportPage });
 
 const routeTree = rootRoute.addChildren([
@@ -164,7 +183,17 @@ const routeTree = rootRoute.addChildren([
     searchRoute,
     settingsRoute,
     serverRoute,
-    dataRoute.addChildren([dataIndexRoute, templatesRoute, newTemplateRoute, templateRoute, sourcesRoute, importRoute]),
+    dataRoute.addChildren([
+      dataIndexRoute,
+      templatesRoute,
+      newTemplateRoute,
+      templateRoute,
+      sourcesRoute,
+      newSourceRoute,
+      sourceRoute,
+      endpointRoute,
+      importRoute,
+    ]),
   ]),
 ]);
 

@@ -20,6 +20,8 @@ test('a household sets up, collects, searches and shares', async ({ page, browse
   await page.getByLabel('Name').fill('Video games');
   await page.getByRole('radio', { name: 'Only me' }).first().click();
   await page.getByRole('button', { name: 'Create collection' }).click();
+  // The form's preview also says "No items yet", so wait for the collection's own page.
+  await expect(page).toHaveURL(/\/c\/[0-9a-f-]+/);
   await expect(page.getByText('No items yet')).toBeVisible();
   const collectionUrl = page.url();
 

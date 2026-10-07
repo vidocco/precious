@@ -1,5 +1,5 @@
 import { Link, Outlet } from '@tanstack/react-router';
-import { useTemplates } from '../../api/queries.ts';
+import { useSources, useTemplates } from '../../api/queries.ts';
 import { Icon, type IconName } from '../../components/Icon.tsx';
 import { EmptyState } from '../../components/ui.tsx';
 
@@ -8,9 +8,10 @@ const linkCls =
 
 export function DataLayout() {
   const { data: templates } = useTemplates();
+  const { data: sources } = useSources();
   const links: { to: string; label: string; icon: IconName; n?: number }[] = [
     { to: '/data/templates', label: 'Templates', icon: 'layers', n: templates?.length },
-    { to: '/data/sources', label: 'Data sources', icon: 'plug' },
+    { to: '/data/sources', label: 'Data sources', icon: 'plug', n: sources?.length },
     { to: '/data/import', label: 'Import & export', icon: 'swap' },
   ];
   return (
@@ -33,18 +34,6 @@ export function DataLayout() {
           </Link>
         ))}
       </nav>
-    </div>
-  );
-}
-
-export function SourcesPage() {
-  return (
-    <div className="grid gap-5">
-      <h1 className="text-[2rem] leading-none font-bold">Data sources</h1>
-      <EmptyState title="Coming in the next version">
-        Here you’ll connect APIs (REST or GraphQL) and web pages to search for items and fill in their fields
-        automatically.
-      </EmptyState>
     </div>
   );
 }
