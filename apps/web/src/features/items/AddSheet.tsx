@@ -9,9 +9,10 @@ import {
   useLookupSearch,
   useSources,
 } from '../../api/queries.ts';
+import { BarcodeScanner } from '../../components/BarcodeScanner.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
-import { cx, ErrorBox, Select, TextInput } from '../../components/ui.tsx';
+import { cx, ErrorBox, IconButton, Select, TextInput } from '../../components/ui.tsx';
 import { saveDraft } from '../../lib/drafts.ts';
 import { useDebounced } from '../../lib/hooks.ts';
 
@@ -62,6 +63,7 @@ export function AddSheet({
   const { create } = useItemMutations();
   const navigate = useNavigate();
   const [picking, setPicking] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const list = useRef<HTMLUListElement>(null);
 
@@ -163,22 +165,40 @@ export function AddSheet({
               }
             }}
           />
+          <IconButton
+            icon="scan"
+            label="Scan a barcode"
+            onClick={() => setScanning(!scanning)}
+            aria-pressed={scanning}
+            className="flex-none border border-line"
+          />
         </div>
+        {scanning && (
+          <BarcodeScanner
+            onCancel={() => setScanning(false)}
+            onDetected={(code) => {
+              setScanning(false);
+              setText(code);
+            }}
+          />
+        )}
         {error && <ErrorBox>{error}</ErrorBox>}
         {results.data?.error && <ErrorBox>{results.data.error}</ErrorBox>}
         {results.isError && <ErrorBox>{errorMessage(results.error)}</ErrorBox>}
-        {searching && (
+        {searching && !scanning && (
           <span className="text-[0.72rem] font-semibold tracking-[0.11em] text-ink-muted uppercase" aria-live="polite">
             {results.isFetching && !results.data
               ? 'Searching…'
               : `${hits.length} result${hits.length === 1 ? '' : 's'} from ${providerName}`}
           </span>
         )}
-        {!searching && <p className="text-[0.9rem] text-ink-muted">Type at least two letters to search.</p>}
+        {!searching && !scanning && (
+          <p className="text-[0.9rem] text-ink-muted">Type at least two letters to search.</p>
+        )}
         <ul
           ref={list}
           aria-label="Results"
-          className={cx('m-0 grid list-none gap-1 p-0', results.isFetching && 'opacity-70')}
+          className={cx('m-0 grid list-none gap-1 p-0', results.isFetching && 'opacity-70', scanning && 'hidden')}
         >
           {hits.map((hit) => (
             <li key={hit.token}>
