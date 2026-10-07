@@ -84,7 +84,16 @@ export async function buildApp(ctx: AppContext, options: FastifyServerOptions = 
 
   const webDist = ctx.config.WEB_DIST_DIR ? resolve(ctx.config.WEB_DIST_DIR) : undefined;
   if (webDist && existsSync(webDist)) {
-    await app.register(fastifyStatic, { root: webDist, wildcard: false });
+    await app.register(fastifyStatic, {
+      root: webDist,
+      wildcard: false,
+      cacheControl: false,
+      // Built assets have hashed names, so they never change; the shell, service worker and
+      // manifest must always be checked, so a new version arrives as soon as it's deployed.
+      setHeaders: (res, path) => {
+        res.header('cache-control', /[\\/]assets[\\/]/.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache');
+      },
+    });
     // Client-side routes: anything that isn't an API or media path gets the app shell.
     app.setNotFoundHandler((req, reply) => {
       if (req.method === 'GET' && !req.url.startsWith('/api/') && !req.url.startsWith('/media/')) {

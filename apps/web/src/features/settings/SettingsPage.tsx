@@ -4,6 +4,7 @@ import { authClient } from '../../api/auth.ts';
 import { api, errorMessage } from '../../api/client.ts';
 import { keys, useMe } from '../../api/queries.ts';
 import { Button, Caps, ErrorBox, Field, Segmented, TextField } from '../../components/ui.tsx';
+import { useInstall } from '../../lib/install.ts';
 import { applyTheme, readTheme, type ThemePref } from '../../lib/theme.ts';
 import { Page } from '../shell/AppShell.tsx';
 
@@ -13,6 +14,31 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <Caps>{title}</Caps>
       {children}
     </section>
+  );
+}
+
+const INSTALL_TEXT = {
+  installed: 'Precious is installed on this device.',
+  ready: 'Install Precious to open it like an app, from your home screen or dock.',
+  ios: 'On iPhone and iPad: tap Share, then Add to Home Screen.',
+  insecure:
+    'Installing needs a secure connection (https://). On Unraid, put Precious behind a reverse proxy with a certificate, such as Nginx Proxy Manager or Tailscale.',
+  menu: 'Use your browser’s menu: Install Precious, or Add to Home screen.',
+} as const;
+
+function InstallSection() {
+  const { state, install } = useInstall();
+  return (
+    <Section title="App on this device">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="min-w-60 flex-1 text-[0.92rem] text-ink-muted">{INSTALL_TEXT[state]}</p>
+        {state === 'ready' && (
+          <Button variant="primary" onClick={() => void install()}>
+            Install Precious
+          </Button>
+        )}
+      </div>
+    </Section>
   );
 }
 
@@ -114,6 +140,7 @@ export function SettingsPage() {
           />
         </Field>
       </Section>
+      <InstallSection />
     </Page>
   );
 }

@@ -26,7 +26,7 @@ export interface TestServer {
  * Starts the app against a brand-new database (created from DATABASE_URL's server,
  * migrated and seeded) and a temporary upload folder. Everything is removed on close.
  */
-export async function startTestServer(): Promise<TestServer> {
+export async function startTestServer(overrides: Record<string, string> = {}): Promise<TestServer> {
   if (!TEST_DATABASE_URL) throw new Error('DATABASE_URL is required for integration tests');
   const name = `precious_test_${randomBytes(5).toString('hex')}`;
   const admin = postgres(TEST_DATABASE_URL, { max: 1, onnotice: () => {} });
@@ -43,6 +43,7 @@ export async function startTestServer(): Promise<TestServer> {
     MIGRATIONS_DIR: resolve(import.meta.dirname, '../drizzle'),
     RECIPES_DIR: resolve(import.meta.dirname, '../../../recipes'),
     LOG_LEVEL: 'silent',
+    ...overrides,
   });
   const database = createDb(config.DATABASE_URL);
   await runMigrations(database, config.MIGRATIONS_DIR);

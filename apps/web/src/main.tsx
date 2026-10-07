@@ -6,9 +6,11 @@ import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { makeRouter } from './app/router.tsx';
+import { listenForInstall } from './lib/install.ts';
 import { applyTheme, readTheme } from './lib/theme.ts';
 
 applyTheme(readTheme());
+listenForInstall();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false } },
@@ -25,3 +27,12 @@ createRoot(root).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+// Makes the app installable and quick to open; it never caches your data (see public/sw.js).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Not served over HTTPS or localhost: the app works the same, it just can't be installed.
+    });
+  });
+}
