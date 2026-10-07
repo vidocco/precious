@@ -35,10 +35,14 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
+  .font-data {
+    font-variant-numeric: tabular-nums;
+  }
   h1,
   h2,
   h3 {
     font-family: var(--font-display);
+    font-stretch: var(--stretch-display);
     text-wrap: balance;
   }
   :focus-visible {

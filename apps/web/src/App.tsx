@@ -60,12 +60,18 @@ export function App() {
       <section className="flex flex-col gap-4">
         <h2 className="text-[length:var(--step-3)] font-semibold">Type</h2>
         <div className="flex flex-col gap-2 rounded-sheet bg-surface p-6">
-          <p className="font-display text-[length:var(--step-4)] font-semibold">Bricolage Grotesque for display</p>
+          <p className="font-display text-[length:var(--step-4)] font-bold [font-stretch:75%]">
+            Instrument Sans, condensed bold for titles
+          </p>
           <p className="max-w-[65ch]">
-            Instrument Sans carries the interface and running text. It stays quiet so covers, titles and the
-            collection's own accent can do the talking.
+            The same family carries the interface and running text at its normal width. It stays quiet so covers, titles
+            and the collection's own accent can do the talking.
+          </p>
+          <p className="text-[length:var(--step--1)] font-semibold tracking-widest text-ink-muted uppercase">
+            Section label · caps and letter-spacing
           </p>
           <p className="font-data text-ink-muted">VG·0142 · acquired 2024-11-03 · 812 g · €64.50</p>
+          <p className="text-ink-muted italic">Italics for mappings, notes and asides.</p>
         </div>
       </section>
 

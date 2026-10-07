@@ -4,14 +4,16 @@
 
 Koillection fills items with hard-coded "scrapers": rigid, ugly, and you can't plug in arbitrary APIs. **Precious** (the repo name) makes **user-defined data sources** the core idea. A source can be a REST API, a GraphQL API or a scraped HTML page:
 
-- A household runs one self-hosted instance with many collections (games, books, vinyl…), each with its own custom fields.
-- Each collection binds to API endpoints by **role**: *search* (find candidates), *enrich* (fill fields after picking one), *compute* (refresh a field on a schedule, e.g. a daily `value`).
+- A household runs one self-hosted instance with many collections (games, books, vinyl…). Each collection uses a **template** that defines its fields, layouts and data sources.
+- Each template binds to API endpoints by **role**: *search* (find candidates), *enrich* (fill fields after picking one), *compute* (refresh a field on a schedule, e.g. a daily `value`).
 - Adding an item means searching, picking a result, then auto-fill based on the rules; manual entry is the fallback.
 - It should look good (cover-first, themed per collection), be installable as a PWA, and ship as **one Docker image (app + PostgreSQL)** on GHCR, ready for Unraid.
 
 The repo `vidocco/precious` is empty (README, LICENSE, .gitignore). Work goes on branch `claude/collection-manager-api-4wwr51`.
 
-**Decisions made:** React · TypeScript · user accounts with private/household/public collections · online-only PWA (installable, no offline data).
+**Decisions made:** React · TypeScript · user accounts with private/household/public collections · online-only PWA (installable, no offline data) · templates are linked, not copied · one typeface (Instrument Sans) · item pages always dark · top bar collapses to a hamburger on narrow screens.
+
+**Design reference:** `design/mockups/index.html` (round 2, published at https://claude.ai/artifact/JFGCBVsFTfkEogtajPf6cp).
 
 ---
 
@@ -27,7 +29,7 @@ The repo `vidocco/precious` is empty (README, LICENSE, .gitignore). Work goes on
 | Response mapping | **JSONata** | Expressive, declarative and safe. User-defined JS would need a sandbox; JSONata doesn't |
 | Request kinds | **REST** (JSON, or XML via fast-xml-parser), **GraphQL** (query + variables, errors handled), **HTML scraping** (cheerio CSS selectors; XPath via jsdom, loaded only when used) | Covers almost any source. All three turn the response into a JSON tree, and the same mapping layer runs on all of them |
 | HTTP | undici + Bottleneck (rate limit per source) + Postgres response cache | Stay within API quotas and avoid repeat calls while you type |
-| Images | sharp: thumbnails, WebP/AVIF, dominant-colour extraction | Covers stored locally (links rot), colours drive theming |
+| Images | sharp: thumbnails, WebP/AVIF, dominant-colour extraction | Covers stored locally (links rot); the dominant colour paints shelf spines |
 | Auth | Better Auth (Drizzle adapter), email+password, admin role | Sessions/cookies solved; no email server needed (admin resets passwords) |
 | Web | React 19 + Vite, TanStack Router + Query, **React Aria Components** (unstyled), Tailwind v4, Motion | Accessible primitives with no imposed look, so the design can be bespoke and not "shadcn default" |
 | PWA | vite-plugin-pwa (manifest, icons, app-shell SW, network-first) | Installable; online-only as decided |
@@ -46,16 +48,27 @@ unraid/           Community Apps template XML
 .github/workflows ci.yml (lint/type/test/e2e), release.yml (multi-arch build → ghcr.io/vidocco/precious)
 ```
 
+## Templates
+
+A **template** describes one kind of collection and is managed under Data management → Templates. Collections are **linked** to a template: editing the template updates every collection that uses it (two people's game collections can share one "Video games" template). Name, accent colour, icon and visibility stay per collection. A template holds:
+
+1. **Fields:** key, label, type (text, longtext, number, money, duration, date, boolean, url, image, rating, choice, multi-choice, tags, person, item-link), options, order, and how it is filled (by hand, by a data source, on a schedule, or by a formula).
+2. **Card layout:** three slots on the cover (top-left, top-right, bottom), each a field or empty, and one to four caption lines under it. Each line is one or more fields joined by " · ", with a style (title / normal / muted / value) and an optional prefix.
+3. **Item page layout:** the cover on the left and an **info box** on the right with the fields you pick; underneath, an ordered list of sections (field group, long text, list/table, value-history chart, extra images, links).
+4. **Collection header:** the figures shown above the wall (count, sum or average of a numeric field, "count where field = value", trend chart of a scheduled field).
+5. **Shelf sizing:** thickness, height and lean each have a mode. `fixed` (vinyl: every sleeve 0.4 × 31.4 cm); `from field` (books: thickness = pages × 0.05 mm + 3 mm, height = the "Height (cm)" field, with minimum, maximum and fallback); `rules` on another field (games: Switch → 1.1 × 17.0 cm, PS5 → 1.4 × 17.0 cm, otherwise a default). Lean is a condition (e.g. Status is Playing).
+6. **Data source bindings:** search providers, the enrichment pipeline and scheduled fields.
+
 ## Data model (core tables)
 
 - `users`, `sessions`, `households`: Better Auth tables plus a role (admin/member).
-- `collections`: owner, name, icon, cover, theme (accent, font pairing, default view), `visibility` (private | household | public-link + slug).
-- `field_definitions`: per collection. `key`, `label`, `type` (text, longtext, number, currency, date, boolean, url, image, rating, select, multiselect, tags, item-link), display options, order, plus optional `compute` config.
+- `templates`: name, description, `fields JSONB`, `card_layout JSONB`, `item_layout JSONB`, `header JSONB`, `shelf JSONB`, version. Every item write is validated against the template's fields (Zod schema built at runtime).
+- `collections`: owner, `template_id`, name, icon, accent, default view, `visibility` (private | household | public-link + slug), who can edit.
 - `items`: collection, title, cover, **`data JSONB`** (custom field values by key, GIN-indexed), `external_refs JSONB` (`{ igdb: "1942", hltb: "10270" }`), `field_meta JSONB` (where each value came from, plus a **locked** flag), created_by, timestamps.
   - JSONB beats EAV (entity-attribute-value tables) here: a flexible schema, plain SQL for filters/sorts/aggregates, fast enough for household-sized data. Item writes are validated by a Zod schema built at runtime from the field definitions.
 - `data_sources`: base URL, auth config (none | API key in header/query | bearer | basic | **OAuth2 client credentials** with token caching), default headers, rate limit, **secrets encrypted with AES-256-GCM** using `APP_SECRET`.
 - `endpoints`: belong to a source. Role (search | lookup | compute), **kind** (rest | graphql | html), method, path/query/body templates (or a GraphQL query + variables, or an HTML `extract` tree), JSONata mapping, cache TTL.
-- `collection_bindings`: links a collection to endpoints: search provider(s) in priority order, the ordered **enrichment pipeline**, and field→endpoint links for computed fields.
+- `template_bindings`: links a template to endpoints: search provider(s) in priority order, the ordered **enrichment pipeline**, and field→endpoint links for computed fields.
 - `computed_values`: item, field, value, fetched_at, status/error. This is a **history table**, so the `value` chart over time comes for free. The latest value is mirrored into `items.data`.
 - `http_cache`: request hash → response, expires_at.
 
@@ -176,11 +189,16 @@ Render the templates (context: `query`, `item`, `refs`, `secrets`, `previous` st
 
 ## Aesthetic direction
 
-- **Cover-first:** collections and items are mainly images. The dominant cover colour tints the item page and the collection header.
-- **Per-collection identity:** accent colour, type pairing (variable fonts) and default view chosen per collection, so the vinyl shelf and the game shelf feel different.
-- **Views:** Wall (big covers, masonry), **Shelf** (generated spines from the cover colour and title, which suits books, vinyl and boxed games), Table (spreadsheet-like bulk editing), List.
-- Motion: View Transitions API shared-element morph from card to item page. Dark mode first-class.
-- **Phase 0 makes 3–4 static mockups** (collection wall, shelf, item page, mapping console) to agree on the look *before* building components.
+- **Cover-first:** collections and items are mainly images on cool gallery-grey surfaces; gilt is used only for value.
+- **One typeface, Instrument Sans:** condensed (75% width) bold for titles, caps with letter-spacing for section labels, tabular figures for numbers and codes, italics for mappings and notes.
+- **Per-collection identity:** accent colour and default view per collection; what appears on cards, headers and item pages comes from the template.
+- **Navigation:** a top bar on every page with Home, Collections, a search field across all collections, Data management, then profile, Settings and Server (admins only). On narrow screens it collapses to a search button and a hamburger menu.
+- **Search:** the top-bar search shows results grouped by collection with the matching text highlighted and the field it matched; each collection also has its own search that filters the wall and shows why each item matched.
+- **Collection view:** header figures from the template, Edit and Delete beside the title, search/filter/view toolbar, and a floating round **+** in the bottom-right corner to add an item.
+- **Item page:** always dark, flat (no gradient). Cover on the left, info box on the right, template sections below; Edit and Delete in the top row, with an in-page delete confirmation.
+- **Views:** Wall, **Shelf** (spines sized by the template's shelf rules; hovering lifts a spine, straightens a leaning one and parts its neighbours), Table (spreadsheet-like bulk editing), List.
+- **Data management:** Templates, Data sources and Import & export as sections in a menu on the right side of the page.
+- Motion: View Transitions API shared-element morph from card to item page. Light and dark follow the system.
 
 ## Docker / Unraid
 
@@ -194,11 +212,11 @@ Render the templates (context: `query`, `item`, `refs`, `secrets`, `previous` st
 ## Milestones (each one usable on its own)
 
 0. **Foundations:** monorepo, lint/format/typecheck, CI, docker-compose dev Postgres, design tokens and mockups.
-1. **Collection manager without APIs:** auth/users/roles, collections, custom fields, item CRUD, image upload, Wall/Table views, filter/sort/search, visibility and public links.
+1. **Collection manager without APIs:** auth/users/roles, the app shell and top bar, templates (fields, card layout, item page layout, collection header), collections linked to templates, item CRUD with delete confirmation, image upload, Wall/Table views, global and per-collection search, filter/sort, visibility and public links.
 2. **Connector engine:** sources, auth types (including OAuth2 client credentials), endpoints of all three kinds (REST, GraphQL, HTML `extract` with CSS/XPath, jsonld/meta/scriptJson), templating, JSONata, cache, rate limits, encrypted secrets, **mapping console with HTML selector picker**, recipe import/export plus bundled presets that cover each kind (e.g. Open Library REST, AniList GraphQL, one HTML scrape recipe).
 3. **Search-to-add:** bindings UI, search sheet, enrichment pipeline, match chooser, review screen, manual fallback, refresh plus locked fields.
 4. **Computed fields:** pg-boss scheduler, history, error states, derived fields, collection dashboards.
-5. **Polish and PWA:** manifest/install, Shelf view, per-collection theming, view transitions, barcode scan, CSV import.
+5. **Polish and PWA:** manifest/install, Shelf view with template sizing rules, view transitions, barcode scan, CSV import.
 6. **Ship:** all-in-one image, s6, backups, GHCR release pipeline, Unraid template, README/docs.
 
 ## Risks, bluntly

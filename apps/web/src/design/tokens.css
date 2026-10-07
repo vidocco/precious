@@ -5,6 +5,10 @@
  * carry the colour; each collection brings its own accent; gilt is reserved
  * for value (what makes things "precious").
  *
+ * One typeface, Instrument Sans. Roles differ by weight, width (75% for
+ * titles), italics, caps and tabular figures rather than by family; the three
+ * font tokens stay so components can name the role they mean.
+ *
  * Every colour is defined on bare :root (light), then redefined for dark under
  * prefers-color-scheme (unless the user forced light) and under data-theme="dark".
  */
@@ -34,9 +38,10 @@
   --danger: #b3263a;
 
   /* Type */
-  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: var(--font-body);
+  --font-data: var(--font-body);
+  --stretch-display: 75%;
 
   /* Type scale (1.25, anchored at 16px) */
   --step--1: 0.8rem;
