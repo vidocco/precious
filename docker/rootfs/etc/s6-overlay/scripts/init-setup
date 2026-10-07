@@ -1,0 +1,36 @@
+#!/command/with-contenv bash
+# Runs first: matches the container user to PUID/PGID, prepares /data, and works out the
+# app secret and database address (generated once and kept in /data when not given).
+set -euo pipefail
+
+PUID="${PUID:-1000}"
+PGID="${PGID:-1000}"
+groupmod -o -g "$PGID" precious
+usermod -o -u "$PUID" precious
+
+mkdir -p /data/uploads /data/backups /run/postgresql
+chown precious:precious /data /data/uploads /data/backups /run/postgresql
+# Earlier files keep working after PUID/PGID change (only walks the tree when needed).
+if [ "$(stat -c %u:%g /data/uploads)" != "$PUID:$PGID" ]; then chown -R precious:precious /data/uploads; fi
+
+ENVDIR=/run/s6/container_environment
+random() { node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))"; }
+
+if [ -z "${APP_SECRET:-}" ]; then
+  if [ ! -s /data/.app-secret ]; then
+    (umask 077 && random > /data/.app-secret)
+    echo "[precious] generated an app secret in /data/.app-secret (keep it with your backups)"
+  fi
+  chown precious:precious /data/.app-secret
+  cat /data/.app-secret > "$ENVDIR/APP_SECRET"
+fi
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  if [ ! -s /data/.db-password ]; then (umask 077 && random > /data/.db-password); fi
+  chown precious:precious /data/.db-password
+  printf 'postgres://precious:%s@127.0.0.1:5432/precious' "$(cat /data/.db-password)" > "$ENVDIR/DATABASE_URL"
+  echo bundled > /run/precious-db
+else
+  echo "[precious] using the database at DATABASE_URL; the bundled PostgreSQL stays off"
+  echo external > /run/precious-db
+fi

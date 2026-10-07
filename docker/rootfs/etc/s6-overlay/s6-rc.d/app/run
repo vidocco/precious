@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# Precious itself: applies database migrations, then serves the app and API on PORT.
+cd /app/server
+exec s6-setuidgid precious node dist/index.mjs

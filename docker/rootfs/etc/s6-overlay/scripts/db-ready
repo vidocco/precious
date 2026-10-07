@@ -1,0 +1,13 @@
+#!/command/with-contenv bash
+# Waits for the bundled PostgreSQL and makes sure the precious database exists.
+set -euo pipefail
+[ "$(cat /run/precious-db)" = bundled ] || exit 0
+
+for _ in $(seq 1 240); do
+  if pg_isready -q -h /run/postgresql -U precious -d postgres; then break; fi
+  sleep 0.5
+done
+pg_isready -q -h /run/postgresql -U precious -d postgres || { echo "[precious] PostgreSQL didn't start" >&2; exit 1; }
+
+exists="$(s6-setuidgid precious psql -h /run/postgresql -U precious -d postgres -tAc "select 1 from pg_database where datname = 'precious'")"
+if [ "$exists" != 1 ]; then s6-setuidgid precious createdb -h /run/postgresql -U precious precious; fi

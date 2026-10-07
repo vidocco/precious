@@ -6,7 +6,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 
 ## Status
 
-Milestones 1 to 5 are done: a working household collection manager, the data source engine, adding items by searching data sources, values kept up to date, and the polish that makes it feel like an app.
+All six milestones of the plan are done: the collection manager, the data source engine, adding items by searching data sources, values kept up to date, the polish that makes it feel like an app, and a single Docker image to run it all.
 
 - First-run setup creates the admin; admins add the rest of the household.
 - Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
@@ -22,7 +22,88 @@ Milestones 1 to 5 are done: a working household collection manager, the data sou
 - **Import & export** (Data management): import a CSV into any collection with column matching and a preview; export each collection as CSV or JSON.
 - **Installable** as an app on phones and desktops (needs https). Precious stays online-only: your data is never cached on the device.
 
-Next: shipping it (the all-in-one Docker image with PostgreSQL, backups, GHCR releases and an Unraid template).
+- **One container**: the app and its PostgreSQL database in a single image, with nightly backups.
+
+## Running it
+
+Precious runs as one container: the app, its own PostgreSQL and a small supervisor. Everything it keeps (database, covers, backups, the app secret) lives in one folder mounted at `/data`.
+
+### Unraid
+
+1. Copy [`unraid/precious.xml`](unraid/precious.xml) to the flash drive as `/boot/config/plugins/dockerMan/templates-user/my-precious.xml`, then in **Docker → Add Container** pick **Precious** from the template list.
+2. Set **Public URL** to the address you'll open it at, e.g. `http://tower.local:8080`, and your **Time zone**. The defaults keep data in `/mnt/user/appdata/precious` with Unraid's usual owner (PUID 99, PGID 100).
+3. Start it and open the Web UI. The first visit asks you to create the admin account; add the rest of the household from **Server**.
+
+### Docker
+
+```sh
+docker run -d --name precious \
+  -p 8080:8080 \
+  -v /path/to/precious-data:/data \
+  -e PUBLIC_URL=http://your-server:8080 \
+  -e TZ=Europe/Madrid \
+  --stop-timeout 30 \
+  --restart unless-stopped \
+  ghcr.io/vidocco/precious:latest
+```
+
+Or with Compose:
+
+```yaml
+services:
+  precious:
+    image: ghcr.io/vidocco/precious:latest
+    ports: ["8080:8080"]
+    volumes: ["./precious-data:/data"]
+    environment:
+      PUBLIC_URL: http://your-server:8080
+      TZ: Europe/Madrid
+    stop_grace_period: 30s
+    restart: unless-stopped
+```
+
+Images are published for amd64 and arm64.
+
+### Settings
+
+| Variable | Default | What it does |
+|---|---|---|
+| `PUBLIC_URL` | `http://localhost:8080` | The address people open Precious at. Other addresses of the same server (its IP, a hostname) work too. With an `https://` address, cookies are marked secure. |
+| `TZ` | `Etc/UTC` | Time zone for scheduled lookups and the nightly backup. |
+| `PUID`, `PGID` | `1000` | Owner of the files in `/data` (Unraid: 99 and 100). |
+| `BACKUP_TIME` | `03:30` | When the nightly backup runs. |
+| `BACKUP_KEEP` | `14` | How many backups to keep. |
+| `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy, so sign-in limits apply per visitor rather than to the proxy. |
+| `DATABASE_URL` | bundled | A `postgres://` address to use your own PostgreSQL (version 16 or later, with the `pg_trgm` extension available); the bundled one then stays off. |
+| `APP_SECRET` | generated | Signs sessions and encrypts data source secrets. Generated on first start into `/data/.app-secret`; changing it signs everyone out and makes saved secrets unreadable. |
+| `LOG_LEVEL` | `info` | `warn` for quieter logs, `debug` for more. |
+
+### HTTPS, installing as an app, scanning barcodes
+
+Browsers only let a site be installed as an app, or use the camera, over `https://` (or on `localhost`). On a home network, put Precious behind a reverse proxy with a certificate, such as Nginx Proxy Manager, SWAG, Caddy or Tailscale Serve; set `PUBLIC_URL` to the `https://` address and `TRUST_PROXY=true`. Everything else works over plain `http://`, and USB barcode scanners work anywhere because they type into the search box.
+
+### Backups and restoring
+
+Every night the whole database is saved to `/data/backups` (`precious-YYYY-MM-DD-HHMM.dump`); the newest 14 are kept. **Server → Backups** lists them, makes one on demand and downloads them. Covers live in `/data/uploads`, so back up the whole `/data` folder (on Unraid, the appdata backup plugin does this).
+
+To restore a backup into the bundled database:
+
+```sh
+docker stop precious
+mv /path/to/precious-data/postgres /path/to/precious-data/postgres.old   # keep it until you're happy
+docker start precious                                                     # starts with an empty database
+docker exec precious pg_restore -h /run/postgresql -U precious -d precious \
+  --clean --if-exists --no-owner /data/backups/precious-2026-10-07-0330.dump
+docker restart precious
+```
+
+Collections can also be exported one by one as CSV or JSON from **Data management → Import & export**.
+
+### Updating
+
+Pull the new image and recreate the container (on Unraid: **Check for updates**, then **Apply update**). Database changes are applied automatically when the app starts.
+
+PostgreSQL itself is pinned to one major version (18). If a future release moves to a new major version, its release notes will say so, and the container refuses to start on the old data rather than risk it: make a backup first, then restore it into a fresh `/data/postgres` as above.
 
 ## Layout
 
@@ -34,6 +115,8 @@ design/mockups    Static design mockups
 docs              Plan and design notes
 recipes           Bundled data source presets (recipe files)
 e2e               Playwright end-to-end tests and a mock API
+docker            The image's service scripts (s6-overlay) and its smoke test
+unraid            The Unraid container template
 ```
 
 ## Development
@@ -58,3 +141,12 @@ pnpm e2e            # Playwright, against the built app and a fresh database
 ```
 
 The first time you open the app it asks you to create the admin account. API docs are at `/api/docs`.
+
+To build and check the image locally:
+
+```sh
+docker build -t precious:test .
+docker/smoke-test.sh precious:test   # starts it, sets it up, backs up, restarts, checks nothing was lost
+```
+
+Releases: push a tag like `v1.0.0`; GitHub Actions smoke-tests the image and publishes `ghcr.io/vidocco/precious` for amd64 and arm64.

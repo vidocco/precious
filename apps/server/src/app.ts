@@ -34,7 +34,11 @@ import { VERSION } from './version.ts';
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 export async function buildApp(ctx: AppContext, options: FastifyServerOptions = {}) {
-  const app = Fastify({ bodyLimit: 1024 * 1024, ...options }).withTypeProvider<ZodTypeProvider>();
+  const app = Fastify({
+    bodyLimit: 1024 * 1024,
+    trustProxy: ctx.config.TRUST_PROXY,
+    ...options,
+  }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 

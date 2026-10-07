@@ -3,7 +3,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { count, eq } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { createUserWithPassword } from '../auth/auth.ts';
+import { CLIENT_IP_HEADER, createUserWithPassword } from '../auth/auth.ts';
 import { mustUser } from '../auth/guard.ts';
 import type { AppContext } from '../context.ts';
 import { user } from '../db/schema.ts';
@@ -19,9 +19,14 @@ export const authRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
     schema: { hide: true },
     async handler(req, reply) {
       const url = new URL(req.url, ctx.config.PUBLIC_URL);
+      const headers = fromNodeHeaders(req.headers);
+      // Better Auth limits sign-in attempts per address; this header (always overwritten,
+      // so it can't be faked) carries the one Fastify saw, or the proxy's X-Forwarded-For
+      // when TRUST_PROXY is on.
+      headers.set(CLIENT_IP_HEADER, req.ip);
       const request = new Request(url, {
         method: req.method,
-        headers: fromNodeHeaders(req.headers),
+        headers,
         body: req.method === 'POST' && req.body !== undefined ? JSON.stringify(req.body) : undefined,
       });
       const res = await ctx.auth.handler(request);

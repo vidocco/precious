@@ -1,0 +1,20 @@
+#!/command/with-contenv bash
+# Creates the bundled database cluster in /data/postgres on first start, and refuses to
+# start one made by a different PostgreSQL major version (that needs a dump and restore).
+set -euo pipefail
+[ "$(cat /run/precious-db)" = bundled ] || exit 0
+
+PGDATA=/data/postgres
+mkdir -p "$PGDATA"
+chown precious:precious "$PGDATA"
+chmod 700 "$PGDATA"
+
+if [ ! -s "$PGDATA/PG_VERSION" ]; then
+  echo "[precious] creating the database in $PGDATA"
+  s6-setuidgid precious initdb -D "$PGDATA" -U precious --pwfile=/data/.db-password \
+    --auth-local=trust --auth-host=scram-sha-256 --encoding=UTF8 --locale=C.UTF-8 >/dev/null
+elif [ "$(cat "$PGDATA/PG_VERSION")" != "$PG_MAJOR" ]; then
+  echo "[precious] /data/postgres was made by PostgreSQL $(cat "$PGDATA/PG_VERSION"), but this image has PostgreSQL $PG_MAJOR." >&2
+  echo "[precious] Restore a backup into a fresh /data/postgres instead; see 'Upgrading PostgreSQL' in the README." >&2
+  exit 1
+fi

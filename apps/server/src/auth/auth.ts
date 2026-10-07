@@ -5,6 +5,8 @@ import type { Config } from '../config.ts';
 import type { Db } from '../db/client.ts';
 import * as schema from '../db/schema.ts';
 
+export const CLIENT_IP_HEADER = 'x-precious-client-ip';
+
 export function createAuth(db: Db, config: Config) {
   return betterAuth({
     secret: config.APP_SECRET,
@@ -42,6 +44,7 @@ export function createAuth(db: Db, config: Config) {
       useSecureCookies: config.PUBLIC_URL.startsWith('https://'),
       // Always on: Better Auth would otherwise skip it under test, so tests wouldn't match production.
       disableOriginCheck: false,
+      ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
     },
     telemetry: { enabled: false },
   });

@@ -32,6 +32,11 @@ const configSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 03:30')
     .default('03:30'),
   PG_DUMP: z.string().default('pg_dump'),
+  /** Behind a reverse proxy: take visitors' addresses from X-Forwarded-For. */
+  TRUST_PROXY: z
+    .enum(['true', 'false', '1', '0', ''])
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 export type Config = z.infer<typeof configSchema>;

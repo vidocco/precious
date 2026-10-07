@@ -217,11 +217,11 @@ Render the templates (context: `query`, `item`, `refs`, `secrets`, `previous` st
 
 ## Docker / Unraid
 
-- One image: Node 24 + PostgreSQL 18 + s6-overlay. Services: `postgres` → `init` (migrations) → `app`. Healthcheck at `/api/health`. Port 8080.
+- One image: Node 24 + PostgreSQL 18 + s6-overlay. Services: `init-setup` (PUID/PGID, secrets) → `postgres-init` (first-run `initdb`, refuses another major's data) → `postgres` → `db-ready` (creates the database) → `app` (runs migrations). Healthcheck at `/api/health`. Port 8080. Checked by `docker/smoke-test.sh` in CI and before every release.
 - Volume `/data` → `/data/postgres`, `/data/uploads`, `/data/backups`. On Unraid, map it to `/mnt/user/appdata/precious`.
 - `PUID`/`PGID` (Unraid 99/100), `TZ`, `APP_SECRET` (generated on first run if missing and saved to `/data`).
 - **`DATABASE_URL` escape hatch:** if set, the bundled Postgres doesn't start and the app uses the external DB.
-- **Nightly `pg_dump`** to `/data/backups` with retention, plus collection export to JSON/CSV. This matters because a Postgres *major* upgrade inside an all-in-one image needs a dump/restore. The PG major is pinned, and an upgrade gets its own documented release.
+- **Nightly `pg_dump`** to `/data/backups` with retention (run by the app itself, so it also covers an external `DATABASE_URL`, and listed/downloadable on the Server page), plus collection export to JSON/CSV. This matters because a Postgres *major* upgrade inside an all-in-one image needs a dump/restore. The PG major is pinned, and an upgrade gets its own documented release.
 - GitHub Actions: on tag, buildx multi-arch → `ghcr.io/vidocco/precious:{semver,latest}`. Ship an Unraid template XML.
 
 ## Milestones (each one usable on its own)

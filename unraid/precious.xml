@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Precious</Name>
+  <Repository>ghcr.io/vidocco/precious:latest</Repository>
+  <Registry>https://github.com/vidocco/precious/pkgs/container/precious</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/vidocco/precious/issues</Support>
+  <Project>https://github.com/vidocco/precious</Project>
+  <Overview>A collection manager for the whole household: books, games, records, anything. Define your own data sources (REST, GraphQL or web pages) to search for items, fill in their details and keep values like prices up to date. Runs as one container with its own PostgreSQL database; everything lives in the appdata folder.</Overview>
+  <Category>Tools: MediaApp:Books MediaApp:Other</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/vidocco/precious/main/apps/web/public/icons/icon-512.png</Icon>
+  <ExtraParams>--stop-timeout=30</ExtraParams>
+  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="The port Precious is served on." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/precious" Mode="rw" Description="The database, uploaded covers, backups and the app secret. Back this folder up." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/precious</Config>
+  <Config Name="Public URL" Target="PUBLIC_URL" Default="http://tower.local:8080" Mode="" Description="The address people open Precious at (an https:// address behind a reverse proxy makes it installable as an app and enables barcode scanning). Other addresses of the same server work too." Type="Variable" Display="always" Required="true" Mask="false">http://tower.local:8080</Config>
+  <Config Name="Time zone" Target="TZ" Default="Europe/Madrid" Mode="" Description="For scheduled lookups and the nightly backup, e.g. Europe/Madrid." Type="Variable" Display="always" Required="false" Mask="false">Europe/Madrid</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User that owns the files in the data folder." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group that owns the files in the data folder." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
+  <Config Name="Backups kept" Target="BACKUP_KEEP" Default="14" Mode="" Description="How many nightly database backups to keep in the data folder's backups directory." Type="Variable" Display="advanced" Required="false" Mask="false">14</Config>
+  <Config Name="Backup time" Target="BACKUP_TIME" Default="03:30" Mode="" Description="When the nightly backup runs (24-hour time)." Type="Variable" Display="advanced" Required="false" Mask="false">03:30</Config>
+  <Config Name="Behind a reverse proxy" Target="TRUST_PROXY" Default="false" Mode="" Description="Set to true when Precious sits behind a reverse proxy (Nginx Proxy Manager, SWAG, Traefik), so sign-in limits apply per visitor." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="External database" Target="DATABASE_URL" Default="" Mode="" Description="Optional. A postgres:// address to use your own PostgreSQL instead of the bundled one, which then stays off." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="App secret" Target="APP_SECRET" Default="" Mode="" Description="Optional. Generated on first start and kept in the data folder; set it only to manage it yourself (64 hex characters)." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+</Container>
