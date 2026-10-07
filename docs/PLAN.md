@@ -68,7 +68,7 @@ A **template** describes one kind of collection and is managed under Data manage
   - JSONB beats EAV (entity-attribute-value tables) here: a flexible schema, plain SQL for filters/sorts/aggregates, fast enough for household-sized data. Item writes are validated by a Zod schema built at runtime from the field definitions.
 - `data_sources`: base URL, auth config (none | API key in header/query | bearer | basic | **OAuth2 client credentials** with token caching), default headers, rate limit, **secrets encrypted with AES-256-GCM** using `APP_SECRET`.
 - `endpoints`: belong to a source. Role (search | lookup | compute), **kind** (rest | graphql | html), method, path/query/body templates (or a GraphQL query + variables, or an HTML `extract` tree), JSONata mapping, cache TTL.
-- `template_bindings`: links a template to endpoints: search provider(s) in priority order, the ordered **enrichment pipeline**, and field→endpoint links for computed fields.
+- `templates.bindings` (JSONB, saved and versioned with the template): search provider(s) in priority order and the ordered **enrichment pipeline** (each step: a lookup, the ref it needs, an optional match search with a threshold, and output → field mappings). Field→endpoint links for computed fields come in Milestone 4.
 - `computed_values`: item, field, value, fetched_at, status/error. This is a **history table**, so the `value` chart over time comes for free. The latest value is mirrored into `items.data`.
 - `http_cache`: request hash → response, expires_at.
 

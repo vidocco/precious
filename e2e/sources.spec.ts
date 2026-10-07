@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { signInAsAdmin } from './helpers.ts';
 
 const MOCK = 'http://127.0.0.1:3401';
 
@@ -37,23 +38,6 @@ const recipe = {
     },
   ],
 };
-
-async function signInAsAdmin(page: Page) {
-  await page.goto('/');
-  // A new browser context is never signed in: the app redirects to setup or sign-in.
-  await page.waitForURL(/\/(setup|login)/);
-  if (page.url().endsWith('/setup')) {
-    await page.getByLabel('Your name').fill('Marta Vidal');
-    await page.getByLabel('Email').fill('marta@example.com');
-    await page.getByLabel('Password').fill('correct-horse-battery');
-    await page.getByRole('button', { name: 'Create admin account' }).click();
-  } else if (page.url().includes('/login')) {
-    await page.getByLabel('Email').fill('marta@example.com');
-    await page.getByLabel('Password').fill('correct-horse-battery');
-    await page.getByRole('button', { name: 'Sign in' }).click();
-  }
-  await expect(page).toHaveURL(/\/$/);
-}
 
 test('an admin imports a source, sets its secret and builds endpoints in the console', async ({ page }) => {
   await signInAsAdmin(page);

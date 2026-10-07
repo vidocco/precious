@@ -6,7 +6,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 
 ## Status
 
-Milestones 1 and 2 are done: a working household collection manager, plus the data source engine.
+Milestones 1 to 3 are done: a working household collection manager, the data source engine, and adding items by searching data sources.
 
 - First-run setup creates the admin; admins add the rest of the household.
 - Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
@@ -14,7 +14,9 @@ Milestones 1 and 2 are done: a working household collection manager, plus the da
 - Items are added by hand with a cover image, shown as a wall or a table, filtered, sorted and searched (inside a collection or across all of them).
 - **Data sources** (Data management → Data sources, admins only): REST, GraphQL and HTML sources with API key, bearer, basic or OAuth2 sign-in, encrypted secrets, default headers, rate limits and caching. Each endpoint has a method, parameters, headers, a body and a JSONata mapping, and can be tested in a console: run it, read the response, click keys to map them, or click elements in a web page to pick them out. Sources are shared as recipe files; presets for Open Library, AniList, IGDB and Wikipedia are included.
 
-Next: using data sources from collections (search when adding an item, fill in fields from the result).
+- **Search to add**: a template's Data sources tab picks which searches find its items and which lookups fill in its fields, including lookups in other sources that find their own match (and ask you when it's unclear). It can be tried before saving. The **+** on a collection then searches; the picked result opens the item form filled in, with where each value came from. **Refresh** on an item looks it up again and never changes values edited by hand (those can be unlocked). Collections can skip the review with quick add.
+
+Next: values kept up to date on a schedule (e.g. a daily price), and collection dashboards.
 
 ## Layout
 

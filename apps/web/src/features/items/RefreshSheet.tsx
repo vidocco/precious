@@ -120,9 +120,11 @@ export function RefreshSheet({
       subtitle="Looks the item up again in its data sources"
       footer={
         <>
-          <Button variant="primary" onClick={() => void apply()} disabled={!result || count === 0 || applying}>
-            {applying ? 'Applying…' : count ? `Apply ${count} change${count === 1 ? '' : 's'}` : 'Nothing to apply'}
-          </Button>
+          {!nothing && (
+            <Button variant="primary" onClick={() => void apply()} disabled={!result || count === 0 || applying}>
+              {applying ? 'Applying…' : count ? `Apply ${count} change${count === 1 ? '' : 's'}` : 'Nothing selected'}
+            </Button>
+          )}
           <Button onClick={onClose}>{nothing ? 'Close' : 'Cancel'}</Button>
         </>
       }
