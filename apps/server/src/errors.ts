@@ -1,12 +1,14 @@
 /** An error with an HTTP status and a message meant for the person using the app. */
 export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly issues?: { path: string; message: string }[],
-  ) {
+  readonly status: number;
+  readonly code: string;
+  readonly issues?: { path: string; message: string }[];
+
+  constructor(status: number, code: string, message: string, issues?: { path: string; message: string }[]) {
     super(message);
+    this.status = status;
+    this.code = code;
+    if (issues) this.issues = issues;
   }
 }
 

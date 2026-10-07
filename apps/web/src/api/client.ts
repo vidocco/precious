@@ -2,11 +2,13 @@ import type { ApiError as ApiErrorBody } from '@precious/shared';
 
 /** An error response from the API, with a message meant for people. */
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly body: ApiErrorBody,
-  ) {
+  readonly status: number;
+  readonly body: ApiErrorBody;
+
+  constructor(status: number, body: ApiErrorBody) {
     super(body.message);
+    this.status = status;
+    this.body = body;
   }
 
   /** Field-level messages keyed by path (e.g. "data.platform"). */

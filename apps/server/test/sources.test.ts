@@ -37,7 +37,7 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
         res.setHeader('content-type', 'application/json');
         res.end(fixture('ol-search.json'));
       },
-      '/works/OL59863W.json': (_req, res) => {
+      '/works/OL59800W.json': (_req, res) => {
         res.setHeader('content-type', 'application/json');
         res.end(fixture('ol-work.json'));
       },
@@ -124,7 +124,7 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
       },
       { id: '/works/OL1W', title: 'Left Hand', subtitle: 'Someone' },
     ]);
-    const work = await run(source, 'work', { refs: { openlibrary: '/works/OL59863W' } });
+    const work = await run(source, 'work', { refs: { openlibrary: '/works/OL59800W' } });
     expect(work.output).toEqual({
       synopsis: 'A groundbreaking work of science fiction.',
       subjects: [

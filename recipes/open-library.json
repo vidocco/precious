@@ -5,9 +5,14 @@
     "name": "Open Library",
     "description": "Books from the Internet Archive's Open Library. No account needed.",
     "baseUrl": "https://openlibrary.org",
-    "auth": { "type": "none" },
+    "auth": {
+      "type": "none"
+    },
     "headers": [],
-    "rateLimit": { "requests": 1, "perSeconds": 1 },
+    "rateLimit": {
+      "requests": 1,
+      "perSeconds": 1
+    },
     "cacheSeconds": 604800
   },
   "secretNames": [],
@@ -20,8 +25,14 @@
       "method": "GET",
       "path": "/search.json",
       "query": [
-        { "name": "q", "value": "{{ query }}" },
-        { "name": "limit", "value": "20" },
+        {
+          "name": "q",
+          "value": "{{ query }}"
+        },
+        {
+          "name": "limit",
+          "value": "20"
+        },
         {
           "name": "fields",
           "value": "key,title,subtitle,author_name,first_publish_year,cover_i,number_of_pages_median"
@@ -36,7 +47,9 @@
         "image": "cover_i ? 'https://covers.openlibrary.org/b/id/' & cover_i & '-L.jpg'",
         "pages": "number_of_pages_median"
       },
-      "sample": { "query": "the left hand of darkness" }
+      "sample": {
+        "query": "the left hand of darkness"
+      }
     },
     {
       "key": "work",
@@ -50,7 +63,11 @@
         "subjects": "subjects[[0..7]]",
         "first_published": "first_publish_date"
       },
-      "sample": { "refs": { "openlibrary": "/works/OL59863W" } }
+      "sample": {
+        "refs": {
+          "openlibrary": "/works/OL59800W"
+        }
+      }
     }
   ]
 }

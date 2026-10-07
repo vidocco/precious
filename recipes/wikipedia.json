@@ -5,9 +5,14 @@
     "name": "Wikipedia (English)",
     "description": "Reads Wikipedia's web pages directly: search, plus an article's title, image, summary and infobox.",
     "baseUrl": "https://en.wikipedia.org",
-    "auth": { "type": "none" },
+    "auth": {
+      "type": "none"
+    },
     "headers": [],
-    "rateLimit": { "requests": 1, "perSeconds": 1 },
+    "rateLimit": {
+      "requests": 1,
+      "perSeconds": 1
+    },
     "cacheSeconds": 604800
   },
   "secretNames": [],
@@ -20,18 +25,34 @@
       "method": "GET",
       "path": "/w/index.php",
       "query": [
-        { "name": "search", "value": "{{ query }}" },
-        { "name": "fulltext", "value": "1" },
-        { "name": "ns0", "value": "1" }
+        {
+          "name": "search",
+          "value": "{{ query }}"
+        },
+        {
+          "name": "fulltext",
+          "value": "1"
+        },
+        {
+          "name": "ns0",
+          "value": "1"
+        }
       ],
       "extract": {
         "results": {
           "css": "li.mw-search-result",
           "many": true,
           "fields": {
-            "title": { "css": ".mw-search-result-heading a" },
-            "href": { "css": ".mw-search-result-heading a", "value": "attr:href" },
-            "snippet": { "css": ".searchresult" }
+            "title": {
+              "css": ".mw-search-result-heading a"
+            },
+            "href": {
+              "css": ".mw-search-result-heading a",
+              "value": "attr:href"
+            },
+            "snippet": {
+              "css": ".searchresult"
+            }
           }
         }
       },
@@ -41,7 +62,9 @@
         "title": "title",
         "subtitle": "$substring(snippet, 0, 90)"
       },
-      "sample": { "query": "Le Guin Earthsea" }
+      "sample": {
+        "query": "Le Guin Earthsea"
+      }
     },
     {
       "key": "article",
@@ -51,22 +74,39 @@
       "method": "GET",
       "path": "/wiki/{{ refs.wikipedia | default: query }}",
       "extract": {
-        "title": { "css": "h1#firstHeading" },
-        "image": { "meta": "og:image" },
-        "summary": { "css": "#mw-content-text .mw-parser-output > p:not(.mw-empty-elt)" },
+        "title": {
+          "css": "h1#firstHeading"
+        },
+        "image": {
+          "meta": "og:image"
+        },
+        "summary": {
+          "css": "#mw-content-text p:not(.mw-empty-elt)"
+        },
         "infobox": {
           "css": "table.infobox tr",
           "many": true,
-          "fields": { "label": { "css": "th" }, "value": { "css": "td" } }
+          "fields": {
+            "label": {
+              "css": "th"
+            },
+            "value": {
+              "css": "td"
+            }
+          }
         }
       },
       "map": {
         "title": "title",
         "image": "image",
-        "summary": "$replace(summary, /\\[\\d+\\]/, '')",
-        "details": "infobox[label and value].{ 'label': label, 'value': value }"
+        "summary": "summary ? $replace(summary, /\\[\\d+\\]/, '')",
+        "details": "infobox[label and value].{ 'label': label, 'value': $replace(value, /\\[\\d+\\]/, '') }"
       },
-      "sample": { "refs": { "wikipedia": "A_Wizard_of_Earthsea" } }
+      "sample": {
+        "refs": {
+          "wikipedia": "A_Wizard_of_Earthsea"
+        }
+      }
     }
   ]
 }

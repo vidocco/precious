@@ -11,8 +11,11 @@ interface CachedToken {
 /** OAuth2 client-credentials tokens, kept in memory until shortly before they expire. */
 export class TokenCache {
   private tokens = new Map<string, CachedToken>();
+  private readonly fetchImpl: FetchLike;
 
-  constructor(private readonly fetchImpl: FetchLike = fetch) {}
+  constructor(fetchImpl: FetchLike = fetch) {
+    this.fetchImpl = fetchImpl;
+  }
 
   private key(sourceId: string, auth: Extract<SourceAuth, { type: 'oauth2' }>, clientId: string) {
     return `${sourceId}|${auth.tokenUrl}|${clientId}|${auth.scope ?? ''}`;

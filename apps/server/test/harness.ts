@@ -67,7 +67,11 @@ export async function startTestServer(): Promise<TestServer> {
 /** A signed-in client: keeps the session cookie and sends JSON. */
 export class Client {
   cookie = '';
-  constructor(readonly app: App) {}
+  readonly app: App;
+
+  constructor(app: App) {
+    this.app = app;
+  }
 
   async request<T = unknown>(method: string, url: string, body?: unknown) {
     const res = await this.app.inject({
