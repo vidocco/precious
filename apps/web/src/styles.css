@@ -17,6 +17,10 @@
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-mark: var(--mark);
+  --color-mark-ink: var(--mark-ink);
+  --color-scrim: var(--scrim);
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
@@ -26,6 +30,7 @@
   --radius-control: var(--radius-control);
   --radius-sheet: var(--radius-sheet);
   --shadow-object: var(--shadow-object);
+  --shadow-float: var(--shadow-float);
 }
 
 @layer base {
@@ -35,8 +40,22 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
-  .font-data {
+  body {
+    margin: 0;
+    background: var(--wall);
+  }
+  .font-data,
+  .tabular {
     font-variant-numeric: tabular-nums;
+  }
+  mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
   }
   h1,
   h2,

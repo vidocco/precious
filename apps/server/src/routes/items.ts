@@ -7,9 +7,10 @@ import {
   itemUpdateSchema,
   searchEntries,
 } from '@precious/shared';
-import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { canView } from '../auth/access.ts';
 import { mustUser } from '../auth/guard.ts';
 import type { AppContext } from '../context.ts';
 import type { Db } from '../db/client.ts';
@@ -144,6 +145,42 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
       const [full] = await selectItems(db).where(eq(items.id, created.id));
       if (!full) throw notFound('Item');
       return reply.code(201).send(itemDto(full.item, collection.accessionPrefix, full.cover, full.createdByName));
+    },
+  );
+
+  // Newest items across every collection the viewer can see (home page).
+  app.get(
+    '/api/items/recent',
+    {
+      schema: { tags: ['items'], querystring: z.object({ limit: z.coerce.number().int().min(1).max(48).default(12) }) },
+    },
+    async (req) => {
+      const viewer = mustUser(req);
+      const all = await db
+        .select({
+          id: collections.id,
+          prefix: collections.accessionPrefix,
+          name: collections.name,
+          accent: collections.accent,
+          ownerId: collections.ownerId,
+          visibility: collections.visibility,
+          editAccess: collections.editAccess,
+        })
+        .from(collections);
+      const visible = all.filter((c) => canView(viewer, c));
+      if (visible.length === 0) return [];
+      const byId = new Map(visible.map((c) => [c.id, c]));
+      const rows = await selectItems(db)
+        .where(inArray(items.collectionId, [...byId.keys()]))
+        .orderBy(desc(items.createdAt))
+        .limit(req.query.limit);
+      return rows.map((r) => {
+        const c = byId.get(r.item.collectionId) as (typeof visible)[number];
+        return {
+          ...itemDto(r.item, c.prefix, r.cover, r.createdByName),
+          collection: { id: c.id, name: c.name, accent: c.accent },
+        };
+      });
     },
   );
 

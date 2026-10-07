@@ -206,6 +206,12 @@ describe.runIf(TEST_DATABASE_URL)('Precious API', () => {
       expect(numbers).toEqual([2, 3, 4, 5, 6]);
     });
 
+    it('lists recently added items across visible collections', async () => {
+      const res = await member.get<(ItemDto & { collection: { name: string } })[]>('/api/items/recent?limit=3');
+      expect(res.body).toHaveLength(3);
+      expect(res.body[0]?.collection.name).toBe('Video games');
+    });
+
     it('computes the template header figures', async () => {
       const res = await admin.get<FigureValue[]>(`/api/collections/${col.id}/figures`);
       const byId = Object.fromEntries(res.body.map((f) => [f.id, f]));

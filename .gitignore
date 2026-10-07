@@ -155,3 +155,7 @@ dist
 dev-dist
 
 /data
+
+# Playwright
+/test-results
+/playwright-report

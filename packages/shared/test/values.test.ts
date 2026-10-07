@@ -72,6 +72,7 @@ describe('formatting', () => {
     expect(formatValue(byId('genre'), ['Puzzle', 'Adventure'])).toBe('Puzzle, Adventure');
     expect(formatValue(byId('stars'), 4)).toBe('4 / 5');
     expect(formatValue(byId('year'), undefined)).toBe('');
+    expect(formatValue(byId('year'), 2019)).toBe('2019');
   });
 
   it('formats durations and accession numbers', () => {

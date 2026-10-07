@@ -6,7 +6,14 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 
 ## Status
 
-Milestone 0 (foundations): workspace, tooling, CI, dev database, design tokens and mockups. Nothing usable yet.
+Milestone 1: a working household collection manager without data sources yet.
+
+- First-run setup creates the admin; admins add the rest of the household.
+- Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
+- Collections are linked to a template and can be private, shared with the household or shared with a public link.
+- Items are added by hand with a cover image, shown as a wall or a table, filtered, sorted and searched (inside a collection or across all of them).
+
+Data sources (searching APIs and web pages to fill items in) are the next milestone.
 
 ## Layout
 
@@ -34,6 +41,9 @@ Checks (the same ones CI runs):
 ```sh
 pnpm lint           # Biome: lint + format check (pnpm format to fix)
 pnpm typecheck
-pnpm test           # set DATABASE_URL to also run the database tests
+pnpm test           # server tests need DATABASE_URL (pnpm db:up provides it)
 pnpm build
+pnpm e2e            # Playwright, against the built app and a fresh database
 ```
+
+The first time you open the app it asks you to create the admin account. API docs are at `/api/docs`.

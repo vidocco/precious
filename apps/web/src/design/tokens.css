@@ -13,29 +13,26 @@
  * prefers-color-scheme (unless the user forced light) and under data-theme="dark".
  */
 :root {
-  /* Surfaces */
   --wall: #eceef1;
   --surface: #f8f9fb;
   --surface-sunk: #e2e5ea;
   --line: #d3d8df;
-
-  /* Ink */
   --ink: #16181d;
   --ink-muted: #5a6070;
   --ink-faint: #8a90a0;
-
-  /* Accent: overridden per collection via data-accent or an inline --accent */
   --accent: #3445d8;
   --accent-ink: #ffffff;
-
-  /* Value / worth */
   --gilt: #9a7020;
   --gilt-soft: #efe3c4;
-
-  /* Semantic */
   --ok: #2f7a4a;
   --warn: #a8641a;
   --danger: #b3263a;
+  --danger-soft: #f6dde1;
+  --mark: #ffe08a;
+  --mark-ink: #16181d;
+  --scrim: rgb(16 18 22 / 0.42);
+  --shadow-object: 0 1px 1px rgb(20 24 32 / 0.08), 0 8px 18px -6px rgb(20 24 32 / 0.28);
+  --shadow-float: 0 6px 16px -4px rgb(20 24 32 / 0.35), 0 2px 4px rgb(20 24 32 / 0.12);
 
   /* Type */
   --font-body: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
@@ -52,11 +49,10 @@
   --step-4: 2.441rem;
   --step-5: 3.815rem;
 
-  /* Shape & depth: covers are objects, chrome is flat */
+  /* Shape: covers are objects, chrome is flat */
   --radius-cover: 3px;
   --radius-control: 10px;
   --radius-sheet: 22px;
-  --shadow-object: 0 1px 1px rgb(20 24 32 / 0.08), 0 8px 18px -6px rgb(20 24 32 / 0.28);
 
   color-scheme: light;
 }
@@ -65,14 +61,20 @@
 [data-accent="ultramarine"] {
   --accent: #3445d8;
 }
-[data-accent="oxblood"] {
-  --accent: #9b2335;
+[data-accent="teal"] {
+  --accent: #0f6b6b;
 }
 [data-accent="moss"] {
   --accent: #3f6b3a;
 }
 [data-accent="saffron"] {
-  --accent: #b26a00;
+  --accent: #a35f00;
+}
+[data-accent="oxblood"] {
+  --accent: #9b2335;
+}
+[data-accent="plum"] {
+  --accent: #6d3f8f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -91,20 +93,31 @@
     --ok: #6cc28c;
     --warn: #e2a35a;
     --danger: #f07a8a;
+    --danger-soft: #3d1e24;
+    --mark: #6b5a1c;
+    --mark-ink: #fff4d0;
+    --scrim: rgb(0 0 0 / 0.6);
     --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+    --shadow-float: 0 8px 20px -4px rgb(0 0 0 / 0.7), 0 2px 4px rgb(0 0 0 / 0.4);
     color-scheme: dark;
   }
   :root:not([data-theme="light"]) [data-accent="ultramarine"] {
     --accent: #8592ff;
   }
-  :root:not([data-theme="light"]) [data-accent="oxblood"] {
-    --accent: #ec7385;
+  :root:not([data-theme="light"]) [data-accent="teal"] {
+    --accent: #5fc9c3;
   }
   :root:not([data-theme="light"]) [data-accent="moss"] {
     --accent: #93c78a;
   }
   :root:not([data-theme="light"]) [data-accent="saffron"] {
     --accent: #f0ad4e;
+  }
+  :root:not([data-theme="light"]) [data-accent="oxblood"] {
+    --accent: #ec7385;
+  }
+  :root:not([data-theme="light"]) [data-accent="plum"] {
+    --accent: #c79ae8;
   }
 }
 
@@ -123,18 +136,74 @@
   --ok: #6cc28c;
   --warn: #e2a35a;
   --danger: #f07a8a;
+  --danger-soft: #3d1e24;
+  --mark: #6b5a1c;
+  --mark-ink: #fff4d0;
+  --scrim: rgb(0 0 0 / 0.6);
   --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 8px 20px -4px rgb(0 0 0 / 0.7), 0 2px 4px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }
 :root[data-theme="dark"] [data-accent="ultramarine"] {
   --accent: #8592ff;
 }
-:root[data-theme="dark"] [data-accent="oxblood"] {
-  --accent: #ec7385;
+:root[data-theme="dark"] [data-accent="teal"] {
+  --accent: #5fc9c3;
 }
 :root[data-theme="dark"] [data-accent="moss"] {
   --accent: #93c78a;
 }
 :root[data-theme="dark"] [data-accent="saffron"] {
   --accent: #f0ad4e;
+}
+:root[data-theme="dark"] [data-accent="oxblood"] {
+  --accent: #ec7385;
+}
+:root[data-theme="dark"] [data-accent="plum"] {
+  --accent: #c79ae8;
+}
+
+/* Item pages are always dark, whatever the theme; accents inside use their dark values. */
+.dark-scope {
+  --wall: #101216;
+  --surface: #181b21;
+  --surface-sunk: #0b0d10;
+  --line: #272b33;
+  --ink: #eceef2;
+  --ink-muted: #a1a7b3;
+  --ink-faint: #6d7380;
+  --accent: #8592ff;
+  --accent-ink: #0d0f1a;
+  --gilt: #dcb662;
+  --gilt-soft: #3a3020;
+  --ok: #6cc28c;
+  --warn: #e2a35a;
+  --danger: #f07a8a;
+  --danger-soft: #3d1e24;
+  --mark: #6b5a1c;
+  --mark-ink: #fff4d0;
+  --scrim: rgb(0 0 0 / 0.6);
+  --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+  --shadow-float: 0 8px 20px -4px rgb(0 0 0 / 0.7), 0 2px 4px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+  background: var(--wall);
+  color: var(--ink);
+}
+.dark-scope [data-accent="ultramarine"] {
+  --accent: #8592ff;
+}
+.dark-scope [data-accent="teal"] {
+  --accent: #5fc9c3;
+}
+.dark-scope [data-accent="moss"] {
+  --accent: #93c78a;
+}
+.dark-scope [data-accent="saffron"] {
+  --accent: #f0ad4e;
+}
+.dark-scope [data-accent="oxblood"] {
+  --accent: #ec7385;
+}
+.dark-scope [data-accent="plum"] {
+  --accent: #c79ae8;
 }

@@ -109,7 +109,11 @@ export function formatValue(field: FieldDefinition, value: unknown, ctx: FormatC
         : '';
     case 'number': {
       if (typeof value !== 'number') return '';
-      const n = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+      // No thousands separator below 10 000, so years read as 2019 rather than 2,019.
+      const n = new Intl.NumberFormat(locale, {
+        maximumFractionDigits: 2,
+        useGrouping: Math.abs(value) >= 10000,
+      }).format(value);
       return field.options.unit ? `${n} ${field.options.unit}` : n;
     }
     case 'rating':
