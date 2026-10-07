@@ -1,7 +1,6 @@
 import { Link, Outlet } from '@tanstack/react-router';
 import { useSources, useTemplates } from '../../api/queries.ts';
 import { Icon, type IconName } from '../../components/Icon.tsx';
-import { EmptyState } from '../../components/ui.tsx';
 
 const linkCls =
   'flex flex-none items-center gap-2 rounded-[9px] px-2.5 py-2 text-[0.9rem] font-medium text-ink-muted no-underline data-[status=active]:bg-surface data-[status=active]:font-semibold data-[status=active]:text-ink data-[status=active]:shadow-[inset_0_0_0_1px_var(--line)]';
@@ -34,17 +33,6 @@ export function DataLayout() {
           </Link>
         ))}
       </nav>
-    </div>
-  );
-}
-
-export function ImportExportPage() {
-  return (
-    <div className="grid gap-5">
-      <h1 className="text-[2rem] leading-none font-bold">Import & export</h1>
-      <EmptyState title="Coming in a later version">
-        Import collections from CSV files and export yours as CSV or JSON.
-      </EmptyState>
     </div>
   );
 }

@@ -26,6 +26,7 @@ import { publicRoutes } from './routes/public.ts';
 import { searchRoutes } from './routes/search.ts';
 import { sourceRoutes } from './routes/sources.ts';
 import { templateRoutes } from './routes/templates.ts';
+import { transferRoutes } from './routes/transfer.ts';
 import { userRoutes } from './routes/users.ts';
 import { VERSION } from './version.ts';
 
@@ -81,6 +82,7 @@ export async function buildApp(ctx: AppContext, options: FastifyServerOptions = 
   await app.register(sourceRoutes, ctx);
   await app.register(lookupRoutes, ctx);
   await app.register(computedRoutes, ctx);
+  await app.register(transferRoutes, ctx);
 
   const webDist = ctx.config.WEB_DIST_DIR ? resolve(ctx.config.WEB_DIST_DIR) : undefined;
   if (webDist && existsSync(webDist)) {

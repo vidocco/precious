@@ -1,5 +1,6 @@
 export * from './api.ts';
 export * from './bindings.ts';
+export * from './csv.ts';
 export * from './health.ts';
 export * from './shelf.ts';
 export * from './sources.ts';
