@@ -40,8 +40,14 @@ function Node({
   selected?: string;
   startOpen?: boolean;
 }) {
-  // Lists open by default (results usually live in one); only 50 entries render anyway.
-  const [open, setOpen] = useState(startOpen ?? (depth < 2 || (Array.isArray(value) && depth < 6)));
+  // Open by default: the top levels, lists (results usually live in one; only 50
+  // entries render anyway) and single-key wrappers such as GraphQL's data.Page.
+  const [open, setOpen] = useState(
+    startOpen ??
+      (depth < 2 ||
+        (depth < 6 &&
+          (Array.isArray(value) || (value !== null && typeof value === 'object' && Object.keys(value).length === 1)))),
+  );
   const isObj = value !== null && typeof value === 'object';
   const entries: [PathSegment, unknown][] = isObj
     ? Array.isArray(value)

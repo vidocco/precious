@@ -5,9 +5,14 @@
     "name": "AniList",
     "description": "Anime and manga from AniList's GraphQL API. No account needed.",
     "baseUrl": "https://graphql.anilist.co",
-    "auth": { "type": "none" },
+    "auth": {
+      "type": "none"
+    },
     "headers": [],
-    "rateLimit": { "requests": 1, "perSeconds": 1 },
+    "rateLimit": {
+      "requests": 1,
+      "perSeconds": 1
+    },
     "cacheSeconds": 259200
   },
   "secretNames": [],
@@ -28,11 +33,13 @@
         "results": "Page.media",
         "id": "id",
         "title": "title.english ? title.english : title.romaji",
-        "subtitle": "$join([format, episodes ? episodes & ' episodes'], ' · ')",
+        "subtitle": "$join([format, episodes ? episodes & (episodes = 1 ? ' episode' : ' episodes')], ' \u00b7 ')",
         "year": "startDate.year",
         "image": "coverImage.large"
       },
-      "sample": { "query": "mushishi" }
+      "sample": {
+        "query": "mushishi"
+      }
     },
     {
       "key": "details",
@@ -53,7 +60,11 @@
         "episodes": "Media.episodes",
         "studio": "Media.studios.nodes[0].name"
       },
-      "sample": { "refs": { "anilist": "457" } }
+      "sample": {
+        "refs": {
+          "anilist": "457"
+        }
+      }
     }
   ]
 }
