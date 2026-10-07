@@ -22,6 +22,16 @@ const configSchema = z.object({
   RECIPES_DIR: z.string().default(resolve(serverRoot, '../../recipes')),
   /** Built web app to serve. Empty in development, where Vite serves it. */
   WEB_DIST_DIR: z.string().optional(),
+  /** Where nightly database backups go. Unset turns them off (the Docker image sets /data/backups). */
+  BACKUP_DIR: z.string().optional(),
+  /** How many backups to keep. */
+  BACKUP_KEEP: z.coerce.number().int().min(1).max(365).default(14),
+  /** When the nightly backup runs, in the server's time zone. */
+  BACKUP_TIME: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 03:30')
+    .default('03:30'),
+  PG_DUMP: z.string().default('pg_dump'),
 });
 
 export type Config = z.infer<typeof configSchema>;

@@ -1,4 +1,5 @@
 import type {
+  BackupStatus,
   CollectionDto,
   CollectionInput,
   CollectionUpdate,
@@ -314,6 +315,20 @@ export function useComputedMutations() {
 }
 
 export const tryFormula = (input: FormulaTryInput) => api.post<FormulaTryResult>('/api/formula/try', input);
+
+// ---------------------------------------------------------------- server
+
+export const useBackups = () =>
+  useQuery({ queryKey: ['backups'], queryFn: () => api.get<BackupStatus>('/api/server/backups') });
+
+export function useBackupNow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<BackupStatus>('/api/server/backups'),
+    onSuccess: (status) => qc.setQueryData(['backups'], status),
+    onError: () => qc.invalidateQueries({ queryKey: ['backups'] }),
+  });
+}
 
 // ---------------------------------------------------------------- search & public
 

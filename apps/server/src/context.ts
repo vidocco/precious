@@ -2,6 +2,7 @@ import type { Auth } from './auth/auth.ts';
 import type { Config } from './config.ts';
 import type { ConnectorRuntime } from './connectors/runner.ts';
 import type { Database } from './db/client.ts';
+import type { Backups } from './services/backups.ts';
 import type { Scheduler } from './services/computed.ts';
 
 /** Everything route plugins need, created once at startup. */
@@ -12,4 +13,6 @@ export interface AppContext {
   connectors: ConnectorRuntime;
   /** Looks up scheduled values; poke it when something is due now. */
   scheduler: Scheduler;
+  /** Nightly database backups, when BACKUP_DIR is set. */
+  backups: Backups | null;
 }

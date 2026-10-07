@@ -1,7 +1,7 @@
 import { createUserInputSchema, type Role, type UserDto } from '@precious/shared';
 import { type FormEvent, useState } from 'react';
 import { errorMessage } from '../../api/client.ts';
-import { useMe, useUserMutations, useUsers } from '../../api/queries.ts';
+import { useBackupNow, useBackups, useMe, useUserMutations, useUsers } from '../../api/queries.ts';
 import {
   Avatar,
   Button,
@@ -108,6 +108,70 @@ function UserRow({ user, isMe }: { user: UserDto; isMe: boolean }) {
   );
 }
 
+const sizeFmt = (bytes: number) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} kB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const whenFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+function BackupsSection() {
+  const { data, isPending, isError, error } = useBackups();
+  const now = useBackupNow();
+  return (
+    <section className="grid gap-3 rounded-sheet border border-line bg-surface p-5 sm:p-6">
+      <Caps>Backups</Caps>
+      {isPending ? (
+        <Spinner />
+      ) : isError ? (
+        <ErrorBox>{errorMessage(error)}</ErrorBox>
+      ) : !data.enabled ? (
+        <p className="text-[0.92rem] text-ink-muted">
+          Backups are off. Set <code>BACKUP_DIR</code> to a folder to turn on nightly backups; the Docker image does
+          this for you (<code>/data/backups</code>).
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="min-w-60 flex-1 text-[0.92rem] text-ink-muted">
+              The whole database is backed up every night at {data.at}, keeping the newest {data.keep}.
+              {data.nextRunAt && ` Next: ${whenFmt.format(new Date(data.nextRunAt))}.`}
+            </p>
+            <Button icon="refresh" onClick={() => now.mutate()} disabled={now.isPending}>
+              {now.isPending ? 'Backing up…' : 'Back up now'}
+            </Button>
+          </div>
+          {now.isError && <ErrorBox>{errorMessage(now.error)}</ErrorBox>}
+          {data.last && !data.last.ok && !now.isError && (
+            <ErrorBox>
+              The last backup ({whenFmt.format(new Date(data.last.at))}) failed: {data.last.message}
+            </ErrorBox>
+          )}
+          {data.backups.length === 0 ? (
+            <p className="text-[0.88rem] text-ink-faint">No backups yet.</p>
+          ) : (
+            <ul className="m-0 grid list-none gap-0.5 p-0 text-[0.9rem]">
+              {data.backups.map((b) => (
+                <li
+                  key={b.name}
+                  className="flex flex-wrap items-baseline gap-x-3 rounded-[8px] px-2 py-1 hover:bg-surface-sunk"
+                >
+                  <span className="min-w-0 flex-1">{whenFmt.format(new Date(b.createdAt))}</span>
+                  <span className="text-[0.84rem] text-ink-faint tabular">{sizeFmt(b.bytes)}</span>
+                  <a href={`/api/server/backups/${b.name}`} download className="text-[0.88rem] font-semibold">
+                    Download
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[0.8rem] text-ink-faint">
+            To restore one, see “Backups and restoring” in the README. Collections can also be exported one by one from
+            Data management → Import &amp; export.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function ServerPage() {
   const { data: me } = useMe();
   const { data: users, isPending } = useUsers();
@@ -191,6 +255,7 @@ export function ServerPage() {
           </div>
         </form>
       </section>
+      <BackupsSection />
     </Page>
   );
 }

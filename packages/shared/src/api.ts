@@ -246,6 +246,25 @@ export const tryBindingsSchema = z.object({
 });
 export type TryBindingsInput = z.input<typeof tryBindingsSchema>;
 
+// ---------------------------------------------------------------- server
+
+export interface BackupFile {
+  name: string;
+  bytes: number;
+  createdAt: string;
+}
+
+export interface BackupStatus {
+  /** Off unless BACKUP_DIR is set (the Docker image sets it). */
+  enabled: boolean;
+  keep: number;
+  /** Local time of the nightly backup. */
+  at: string;
+  nextRunAt: string | null;
+  last: { at: string; ok: boolean; message?: string } | null;
+  backups: BackupFile[];
+}
+
 // ---------------------------------------------------------------- errors
 
 export interface ApiError {

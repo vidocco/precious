@@ -10,6 +10,7 @@ import { createRuntime } from '../src/connectors/runner.ts';
 import { createDb, type Database } from '../src/db/client.ts';
 import { runMigrations } from '../src/db/migrate.ts';
 import { seedStarterTemplates } from '../src/db/seed.ts';
+import { backupsFrom } from '../src/services/backups.ts';
 import { Scheduler } from '../src/services/computed.ts';
 
 export const TEST_DATABASE_URL = process.env.DATABASE_URL;
@@ -52,7 +53,10 @@ export async function startTestServer(overrides: Record<string, string> = {}): P
   const connectors = createRuntime(database.db, config.APP_SECRET);
   // Never started: tests run due lookups themselves.
   const scheduler = new Scheduler({ db: database.db, rt: connectors });
-  const app = await buildApp({ config, database, auth, connectors, scheduler }, { logger: false });
+  const app = await buildApp(
+    { config, database, auth, connectors, scheduler, backups: backupsFrom(config) },
+    { logger: false },
+  );
   await app.ready();
 
   return {

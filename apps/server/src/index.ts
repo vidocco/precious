@@ -7,6 +7,7 @@ import { createRuntime } from './connectors/runner.ts';
 import { createDb } from './db/client.ts';
 import { runMigrations } from './db/migrate.ts';
 import { fillStarterShelves, seedStarterTemplates } from './db/seed.ts';
+import { backupsFrom } from './services/backups.ts';
 import { Scheduler, syncAllComputed } from './services/computed.ts';
 import { pruneImages } from './services/remoteImages.ts';
 
@@ -25,7 +26,11 @@ const connectors = createRuntime(database.db, config.APP_SECRET);
 const scheduler = new Scheduler({ db: database.db, rt: connectors }, (err) =>
   app.log.warn({ err }, 'scheduled lookups failed'),
 );
-const app = await buildApp({ config, database, auth, connectors, scheduler }, { logger: { level: config.LOG_LEVEL } });
+const backups = backupsFrom(config, (err) => app.log.error({ err }, 'nightly backup failed'));
+const app = await buildApp(
+  { config, database, auth, connectors, scheduler, backups },
+  { logger: { level: config.LOG_LEVEL } },
+);
 if (seeded) app.log.info({ seeded }, 'added starter templates');
 
 // Covers no item uses (replaced, removed, or found for an item never saved) are cleared daily.
@@ -44,10 +49,12 @@ sweep.unref();
 // Values kept up to date: catch up with any settings changed while stopped, then check every minute.
 await syncAllComputed(database.db);
 scheduler.start();
+backups?.start();
 
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down');
   scheduler.stop();
+  backups?.stop();
   await app.close();
   await database.close();
   process.exit(0);
