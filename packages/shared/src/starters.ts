@@ -60,6 +60,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       { id: 'notes', label: 'Notes', type: 'longtext' },
     ],
     card: {
+      cover: { width: 13.5, height: 17, fit: 'whole' },
       slots: { tl: 'platform', tr: '$accession', b: null },
       lines: [
         { fields: ['$title'], style: 'title' },
@@ -141,6 +142,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       { id: 'notes', label: 'Notes', type: 'longtext' },
     ],
     card: {
+      cover: { width: 15, height: 22.5, fit: 'crop' },
       slots: { tl: 'language', tr: 'publisher', b: 'author' },
       lines: [
         { fields: ['$title'], style: 'title' },
@@ -200,6 +202,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       { id: 'notes', label: 'Notes', type: 'longtext' },
     ],
     card: {
+      cover: { width: 1, height: 1, fit: 'crop' },
       slots: { tl: 'format', tr: '$accession', b: null },
       lines: [
         { fields: ['$title'], style: 'title' },
@@ -245,6 +248,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       { id: 'notes', label: 'Notes', type: 'longtext' },
     ],
     card: {
+      cover: { width: 1, height: 1, fit: 'whole' },
       slots: { tl: 'year', tr: '$accession', b: null },
       lines: [
         { fields: ['$title'], style: 'title' },

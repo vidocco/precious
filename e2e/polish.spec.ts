@@ -150,3 +150,45 @@ test('scanning a barcode fills the search', async ({ page }) => {
   await expect(page.getByRole('searchbox')).toHaveValue('9780441478125', { timeout: 10_000 });
   await expect(page.getByText(/results? from Scan source/)).toBeVisible();
 });
+
+test('a template sets the shape of its covers on the wall and the item page', async ({ page }) => {
+  await signInAsAdmin(page);
+  const api = page.request;
+  const origin = { origin: new URL(page.url()).origin };
+  const templates = await (await api.get('/api/templates')).json();
+  const blank = templates.find((t: { name: string }) => t.name === 'Blank');
+  const c = await (
+    await api.post('/api/collections', { headers: origin, data: { templateId: blank.id, name: 'Records' } })
+  ).json();
+  await api.post(`/api/collections/${c.id}/items`, { headers: origin, data: { title: 'Round thing', data: {} } });
+  const ratio = (b: { width: number; height: number } | null) => (b ? b.width / b.height : 0);
+
+  // Covers start at 3:4.
+  await page.goto(`/c/${c.id}`);
+  const card = page
+    .getByRole('link', { name: /Round thing/ })
+    .locator('> div')
+    .first();
+  expect(ratio(await card.boundingBox())).toBeCloseTo(0.75, 1);
+
+  await page.goto(`/data/templates/${blank.id}`);
+  await page.getByRole('tab', { name: 'Card' }).click();
+  await page.getByRole('radio', { name: 'Square' }).click();
+  await expect(page.getByRole('radio', { name: 'Square' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('radio', { name: 'Show whole image' }).click();
+  // Custom sizes outside 1:3 are refused before saving.
+  await page.getByRole('radio', { name: 'Custom' }).click();
+  await page.getByLabel('Cover width').fill('40');
+  await expect(page.getByText('Keep the shape within 1:3 and 3:1')).toBeVisible();
+  await page.getByLabel('Cover width').fill('1');
+  await expect(page.getByText('Keep the shape within 1:3 and 3:1')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible();
+
+  await page.goto(`/c/${c.id}`);
+  expect(ratio(await card.boundingBox())).toBeCloseTo(1, 1);
+  await page.getByRole('link', { name: /Round thing/ }).click();
+  await expect(page.getByRole('heading', { name: 'Round thing' })).toBeVisible();
+  const cover = page.locator('[style*="aspect-ratio: 1 / 1"]').first();
+  expect(ratio(await cover.boundingBox())).toBeCloseTo(1, 1);
+});

@@ -1,3 +1,4 @@
+import { coverShape } from '@precious/shared';
 import { Link, useParams } from '@tanstack/react-router';
 import { errorMessage } from '../../api/client.ts';
 import { usePublicCollection } from '../../api/queries.ts';
@@ -88,6 +89,7 @@ export function PublicItemPage() {
               item={item}
               fields={data.template.fields}
               layout={data.template.itemLayout}
+              shape={coverShape(data.template.card)}
               collectionName={data.collection.name}
             />
           )}

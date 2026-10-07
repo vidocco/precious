@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COVER_PRESETS,
+  coverShape,
+  DEFAULT_COVER,
   diffTemplateFields,
   type FieldDefinition,
   fieldSchema,
@@ -72,5 +75,47 @@ describe('field changes', () => {
     expect(makeFieldId('Año de compra', [])).toBe('ano_de_compra');
     expect(makeFieldId('Notes', ['notes'])).toBe('notes_2');
     expect(makeFieldId('123', [])).toBe('field');
+  });
+});
+
+describe('cover shape', () => {
+  const card = (cover?: unknown) => ({ name: 'T', card: { ...(cover !== undefined && { cover }), lines: [] } });
+
+  it('defaults to 3:4, cropped', () => {
+    expect(templateInputSchema.parse(card()).card.cover).toEqual(DEFAULT_COVER);
+    expect(templateInputSchema.parse({ name: 'T' }).card.cover).toEqual(DEFAULT_COVER);
+    expect(templateInputSchema.parse(card({ width: 1, height: 1 })).card.cover).toEqual({
+      width: 1,
+      height: 1,
+      fit: 'crop',
+    });
+  });
+
+  it('rejects sizes out of range and shapes more extreme than 1:3', () => {
+    expect(templateInputSchema.safeParse(card({ width: 0, height: 4 })).success).toBe(false);
+    expect(templateInputSchema.safeParse(card({ width: 10, height: 31 })).success).toBe(false);
+    expect(templateInputSchema.safeParse(card({ width: 31, height: 10 })).success).toBe(false);
+    expect(templateInputSchema.safeParse(card({ width: 10, height: 30, fit: 'whole' })).success).toBe(true);
+  });
+
+  it('every preset is a valid shape', () => {
+    for (const p of COVER_PRESETS) {
+      expect(templateInputSchema.safeParse(card({ width: p.width, height: p.height })).success, p.id).toBe(true);
+    }
+  });
+
+  it('cards saved before shapes existed keep 3:4', () => {
+    expect(coverShape({})).toEqual(DEFAULT_COVER);
+    expect(coverShape(null)).toEqual(DEFAULT_COVER);
+    expect(coverShape({ cover: { width: 1, height: 1, fit: 'whole' } })).toEqual({ width: 1, height: 1, fit: 'whole' });
+  });
+
+  it('gives the starters their shapes', () => {
+    const shape = (name: string) =>
+      templateInputSchema.parse(STARTER_TEMPLATES.find((t) => t.name === name)).card.cover;
+    expect(shape('Vinyl')).toMatchObject({ width: 1, height: 1 });
+    expect(shape('Books')).toMatchObject({ width: 15, height: 22.5 });
+    expect(shape('Video games')).toMatchObject({ width: 13.5, height: 17, fit: 'whole' });
+    expect(shape('Blank')).toEqual(DEFAULT_COVER);
   });
 });

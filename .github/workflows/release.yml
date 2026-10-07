@@ -49,6 +49,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # The release people run now must hand its /data over to this one unchanged, and still run on it after.
+      - name: Upgrade test
+        run: |
+          if docker pull ghcr.io/${{ github.repository }}:latest; then
+            docker/upgrade-test.sh ghcr.io/${{ github.repository }}:latest precious:test
+          else
+            echo "::notice::No published release yet, so there is nothing to upgrade from."
+          fi
       - name: Build and publish
         uses: docker/build-push-action@v6
         with:

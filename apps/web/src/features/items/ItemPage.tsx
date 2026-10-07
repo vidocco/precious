@@ -1,4 +1,4 @@
-import { isNumericType } from '@precious/shared';
+import { coverShape, isNumericType } from '@precious/shared';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useState } from 'react';
 import { errorMessage } from '../../api/client.ts';
@@ -99,6 +99,7 @@ export function ItemPage() {
           item={it}
           fields={template.data.fields}
           layout={template.data.itemLayout}
+          shape={coverShape(template.data.card)}
           collectionName={c.name}
           users={users}
           morph

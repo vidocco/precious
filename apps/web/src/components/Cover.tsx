@@ -1,4 +1,4 @@
-import type { CoverDto } from '@precious/shared';
+import type { CoverDto, CoverShape } from '@precious/shared';
 import type { ReactNode } from 'react';
 import { mediaUrl } from '../api/client.ts';
 import { cx } from './ui.tsx';
@@ -14,7 +14,7 @@ export function Cover({
   cover,
   title,
   size = 'sm',
-  square,
+  shape,
   className,
   children,
   eager,
@@ -23,7 +23,8 @@ export function Cover({
   cover: CoverDto | null;
   title: string;
   size?: 'sm' | 'lg';
-  square?: boolean;
+  /** The template's cover shape; 3:4 when not given. */
+  shape?: CoverShape;
   className?: string;
   children?: ReactNode;
   eager?: boolean;
@@ -34,10 +35,14 @@ export function Cover({
     <div
       className={cx(
         '@container relative w-full max-w-full overflow-hidden rounded-cover shadow-object',
-        square ? 'aspect-square' : 'aspect-[3/4]',
+        !shape && 'aspect-[3/4]',
         className,
       )}
-      style={{ background: cover?.color ?? placeholderColor(title), viewTransitionName: transitionName }}
+      style={{
+        background: cover?.color ?? placeholderColor(title),
+        viewTransitionName: transitionName,
+        ...(shape && { aspectRatio: `${shape.width} / ${shape.height}` }),
+      }}
     >
       {cover ? (
         <img
@@ -45,7 +50,7 @@ export function Cover({
           alt=""
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"
-          className="absolute inset-0 size-full object-cover"
+          className={cx('absolute inset-0 size-full', shape?.fit === 'whole' ? 'object-contain' : 'object-cover')}
         />
       ) : (
         <span

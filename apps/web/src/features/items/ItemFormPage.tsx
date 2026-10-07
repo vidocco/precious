@@ -1,5 +1,7 @@
 import {
   buildItemSchema,
+  type CoverShape,
+  coverShape,
   type FieldDefinition,
   type FillResult,
   type FillSource,
@@ -46,8 +48,10 @@ function CoverPicker({
   onChange,
   tag,
   loading,
+  shape,
 }: {
   cover: Cover;
+  shape: CoverShape;
   onChange: (c: Cover) => void;
   tag?: ReactNode;
   loading?: boolean;
@@ -83,12 +87,19 @@ function CoverPicker({
           e.preventDefault();
           void onFile(e.dataTransfer.files[0]);
         }}
-        className="relative grid aspect-[3/4] w-full max-w-[220px] place-items-center overflow-hidden rounded-cover border-[1.5px] border-dashed border-line bg-wall text-ink-muted"
-        style={cover ? { background: cover.color ?? undefined, borderStyle: 'solid' } : undefined}
+        className="relative grid w-full max-w-[220px] place-items-center overflow-hidden rounded-cover border-[1.5px] border-dashed border-line bg-wall text-ink-muted"
+        style={{
+          aspectRatio: `${shape.width} / ${shape.height}`,
+          ...(cover && { background: cover.color ?? undefined, borderStyle: 'solid' }),
+        }}
         aria-label={cover ? 'Replace cover' : 'Upload a cover'}
       >
         {cover ? (
-          <img src={mediaUrl(cover.id, 'lg')} alt="" className="absolute inset-0 size-full object-cover" />
+          <img
+            src={mediaUrl(cover.id, 'lg')}
+            alt=""
+            className={cx('absolute inset-0 size-full', shape.fit === 'whole' ? 'object-contain' : 'object-cover')}
+          />
         ) : (
           <span className="grid justify-items-center gap-1.5 px-4 text-center text-[0.85rem]">
             <Icon name="image" size={28} />
@@ -308,6 +319,7 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
         <CoverPicker
           cover={cover}
+          shape={coverShape(template.data.card)}
           loading={coverLoading}
           onChange={(c) => {
             markEdited('$cover');

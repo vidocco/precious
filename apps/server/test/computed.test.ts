@@ -178,7 +178,9 @@ describe.runIf(TEST_DATABASE_URL)('values kept up to date', () => {
     ]);
 
     prices.a = 30;
-    await runDue(env(), { now: new Date(now.getTime() + 2 * 3600_000) });
+    // The retry, brought forward to now: a time in the future could fall on tomorrow, outside the history below.
+    await dueNow(server.database.db, { itemIds: [itemA.id] });
+    await runDue(env());
     const fixed = await get(itemA.id);
     expect(fixed.data).toMatchObject({ price: 30, per_hour: 3 });
     expect(fixed.fieldMeta.price?.error).toBeUndefined();

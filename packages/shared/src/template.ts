@@ -67,7 +67,43 @@ export type FieldRef = z.infer<typeof fieldRefSchema>;
 
 export const LINE_STYLES = ['title', 'normal', 'muted', 'value'] as const;
 
+/**
+ * The shape of an item's cover, as width × height (cm, though only the ratio matters).
+ * `crop` fills the shape with the image; `whole` shows all of it on the cover's colour.
+ */
+export const COVER_FITS = ['crop', 'whole'] as const;
+
+export const coverShapeSchema = z
+  .object({
+    width: z.number().min(1, 'Make it at least 1 cm wide').max(100, 'Make it at most 100 cm wide'),
+    height: z.number().min(1, 'Make it at least 1 cm tall').max(100, 'Make it at most 100 cm tall'),
+    fit: z.enum(COVER_FITS).default('crop'),
+  })
+  .refine((c) => c.width / c.height <= 3 && c.height / c.width <= 3, {
+    message: 'Keep the shape within 1:3 and 3:1',
+    path: ['width'],
+  });
+
+export type CoverShape = z.infer<typeof coverShapeSchema>;
+
+export const DEFAULT_COVER: CoverShape = { width: 3, height: 4, fit: 'crop' };
+
+export const COVER_PRESETS = [
+  { id: 'book', label: 'Book', width: 15, height: 22.5 },
+  { id: 'classic', label: 'Classic', width: 3, height: 4 },
+  { id: 'case', label: 'Game case', width: 13.5, height: 17 },
+  { id: 'switch', label: 'Switch case', width: 10.5, height: 17 },
+  { id: 'square', label: 'Square', width: 1, height: 1 },
+  { id: 'landscape', label: 'Landscape', width: 4, height: 3 },
+] as const;
+
+/** The card's cover shape; templates saved before shapes existed have none and keep 3:4. */
+export function coverShape(card: { cover?: CoverShape | null } | null | undefined): CoverShape {
+  return card?.cover ?? DEFAULT_COVER;
+}
+
 export const cardLayoutSchema = z.object({
+  cover: coverShapeSchema.default(DEFAULT_COVER),
   slots: z
     .object({
       tl: fieldRefSchema.nullable().default(null),
@@ -146,7 +182,7 @@ export const templateInputSchema = z
       .regex(/^[A-Z0-9]{1,4}$/, 'Up to 4 capital letters or digits')
       .default('IT'),
     fields: z.array(fieldSchema).max(80).default([]),
-    card: cardLayoutSchema.default({ slots: { tl: null, tr: null, b: null }, lines: [] }),
+    card: cardLayoutSchema.default({ cover: DEFAULT_COVER, slots: { tl: null, tr: null, b: null }, lines: [] }),
     itemLayout: itemLayoutSchema.default({ info: [], sections: [] }),
     header: headerSchema.default({ figures: [] }),
     /** Which data sources search for items and fill in their fields. */

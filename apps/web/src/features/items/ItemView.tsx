@@ -1,4 +1,4 @@
-import type { FieldDefinition, ItemDto, ItemLayout, UserDto } from '@precious/shared';
+import type { CoverShape, FieldDefinition, ItemDto, ItemLayout, UserDto } from '@precious/shared';
 import { formatValue } from '@precious/shared';
 import { Cover } from '../../components/Cover.tsx';
 import { Icon } from '../../components/Icon.tsx';
@@ -58,6 +58,7 @@ export function ItemView({
   users,
   onUnlock,
   morph,
+  shape,
 }: {
   item: ItemDto;
   fields: FieldDefinition[];
@@ -68,6 +69,8 @@ export function ItemView({
   onUnlock?: (ref: string) => void;
   /** The cover morphs from the card or spine that was clicked. */
   morph?: boolean;
+  /** The template's cover shape. */
+  shape?: CoverShape;
 }) {
   const ctxValue = (ref: string) => {
     const field = fields.find((f) => f.id === ref);
@@ -91,6 +94,7 @@ export function ItemView({
           title={item.title}
           size="lg"
           eager
+          shape={shape}
           transitionName={morph ? `cover-${item.id}` : undefined}
           className="max-w-[250px] shadow-[0_2px_2px_rgb(0_0_0/0.4),0_22px_44px_-16px_rgb(0_0_0/0.85)]"
         />

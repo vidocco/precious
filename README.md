@@ -9,7 +9,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 All six milestones of the plan are done: the collection manager, the data source engine, adding items by searching data sources, values kept up to date, the polish that makes it feel like an app, and a single Docker image to run it all.
 
 - First-run setup creates the admin; admins add the rest of the household.
-- Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
+- Templates (five starters included) define each kind of collection: its fields, the shape of its covers (book, game case, square for records, or any size; cropped or shown whole), what shows on and under each cover, the item page layout and the header figures.
 - Collections are linked to a template and can be private, shared with the household or shared with a public link.
 - Items are added by hand with a cover image, shown as a wall, a **shelf** (spines sized by the template's rules: fixed, from fields such as pages and height, or by a field's value such as platform) or a table, filtered, sorted and searched (inside a collection or across all of them). Opening one morphs its cover into the item page.
 - **Data sources** (Data management → Data sources, admins only): REST, GraphQL and HTML sources with API key, bearer, basic or OAuth2 sign-in, encrypted secrets, default headers, rate limits and caching. Each endpoint has a method, parameters, headers, a body and a JSONata mapping, and can be tested in a console: run it, read the response, click keys to map them, or click elements in a web page to pick them out. Sources are shared as recipe files; presets for Open Library, AniList, IGDB and Wikipedia are included.
@@ -101,7 +101,7 @@ Collections can also be exported one by one as CSV or JSON from **Data managemen
 
 ### Updating
 
-Pull the new image and recreate the container (on Unraid: **Check for updates**, then **Apply update**). Database changes are applied automatically when the app starts.
+Pull the new image and recreate the container (on Unraid: **Check for updates**, then **Apply update**). Database changes are applied automatically when the app starts. Every release is checked before it's published: it takes over the previous release's `/data` without changing anything, and the previous release still runs on that data afterwards, so going back is possible too.
 
 PostgreSQL itself is pinned to one major version (18). If a future release moves to a new major version, its release notes will say so, and the container refuses to start on the old data rather than risk it: make a backup first, then restore it into a fresh `/data/postgres` as above.
 
@@ -147,6 +147,7 @@ To build and check the image locally:
 ```sh
 docker build -t precious:test .
 docker/smoke-test.sh precious:test   # starts it, sets it up, backs up, restarts, checks nothing was lost
+docker/upgrade-test.sh ghcr.io/vidocco/precious:latest precious:test   # upgrades from the last release and back
 ```
 
-Releases: push a tag like `v1.0.0`; GitHub Actions smoke-tests the image and publishes `ghcr.io/vidocco/precious` for amd64 and arm64.
+Releases: push a tag like `v1.0.0`; GitHub Actions smoke-tests the image, checks it upgrades from the previous release, and publishes `ghcr.io/vidocco/precious` for amd64 and arm64.

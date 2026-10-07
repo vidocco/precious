@@ -1,8 +1,9 @@
-import { type Figure, isNumericType, LINE_STYLES, type TemplateData } from '@precious/shared';
+import { coverShape, type Figure, isNumericType, LINE_STYLES, type TemplateData } from '@precious/shared';
 import { Figures } from '../../components/Figures.tsx';
 import { ItemCard } from '../../components/ItemCard.tsx';
 import { Button, Caps, cx, IconButton, Select, TextInput } from '../../components/ui.tsx';
 import { ItemView } from '../items/ItemView.tsx';
+import { CoverShapePicker } from './CoverShapePicker.tsx';
 import { move, sampleItem } from './editorUtils.ts';
 import { RefList, RefSelect } from './RefPicker.tsx';
 
@@ -18,6 +19,7 @@ export function CardTab({ t, set }: { t: TemplateData; set: SetT }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
       <div className="grid content-start gap-5">
+        <CoverShapePicker value={coverShape(card)} onChange={(cover) => setCard({ cover })} />
         <div className="grid gap-2">
           <Caps>On the cover</Caps>
           {(['tl', 'tr', 'b'] as const).map((pos) => (
@@ -226,6 +228,7 @@ export function ItemPageTab({ t, set }: { t: TemplateData; set: SetT }) {
             item={sampleItem(t, 'Example item')}
             fields={t.fields}
             layout={layout}
+            shape={coverShape(t.card)}
             collectionName="Collection"
           />
         </div>

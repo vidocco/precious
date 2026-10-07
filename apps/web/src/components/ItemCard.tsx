@@ -1,4 +1,4 @@
-import type { CardLayout, FieldDefinition, ItemDto, ItemMatch } from '@precious/shared';
+import { type CardLayout, coverShape, type FieldDefinition, type ItemDto, type ItemMatch } from '@precious/shared';
 import { Link } from '@tanstack/react-router';
 import { refValue } from '../lib/format.ts';
 import { Cover, Slot } from './Cover.tsx';
@@ -41,6 +41,7 @@ export function ItemCard({
       <Cover
         cover={item.cover}
         title={item.title}
+        shape={coverShape(card)}
         className="transition-transform duration-200 group-hover:-translate-y-1"
         transitionName={morph ? `cover-${item.id}` : undefined}
       >
