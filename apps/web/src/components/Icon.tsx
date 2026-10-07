@@ -56,16 +56,18 @@ export function Icon({ name, size = 18, className = '' }: { name: IconName; size
   );
 }
 
+/** The One Ring ("my precious"): the app's mark, in gilt. */
 export function Logo({ size = 22 }: { size?: number }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 32 32" width={size} height={size}>
-      <path d="M16 6 25 13 16 26 7 13Z" fill="none" stroke="var(--gilt)" strokeWidth="2.4" strokeLinejoin="round" />
+      <circle cx="16" cy="16" r="10" fill="none" stroke="var(--gilt)" strokeWidth="4.6" />
       <path
-        d="M7 13h18M12 13l4 13 4-13M12 13l4-7 4 7"
+        d="M8.6 11.9a8.6 8.6 0 0 1 7.4-4.3"
         fill="none"
-        stroke="var(--gilt)"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
+        stroke="#fff6d6"
+        strokeOpacity="0.5"
+        strokeWidth="1.2"
+        strokeLinecap="round"
       />
     </svg>
   );
