@@ -244,15 +244,22 @@ export async function updateValues(
         refs: item.externalRefs,
         item: { title: item.title, ...data },
       });
-      if (!res.ok) error = res.errors[0]?.message ?? 'The lookup failed';
+      // "Nothing" is an answer (no ratings yet, say), not a failure: the field is left as it is.
+      const nothing = !res.ok && res.errors.length === 1 && res.errors[0]?.message.includes('produced nothing');
+      if (nothing) value = undefined;
+      else if (!res.ok) error = res.errors[0]?.message ?? 'The lookup failed';
       else {
         const coerced = coerceToField(field, res.output);
         if (!coerced.ok) error = coerced.reason;
-        else if (coerced.value === undefined) error = 'The data source has no value for this item';
         else value = coerced.value;
       }
     }
-    if (error === undefined) {
+    if (error === undefined && value === undefined) {
+      const { error: _e, errorAt: _a, ...rest } = meta[c.field] ?? { source: b?.source.name ?? 'Data source' };
+      if (meta[c.field]) meta = { ...meta, [c.field]: rest };
+      outcome.skipped.push(c.field);
+      states.push({ ...base, nextRunAt: scheduled, lastRunAt: now, failures: 0 });
+    } else if (error === undefined) {
       data = { ...data, [c.field]: value };
       meta = { ...meta, [c.field]: { source: b?.source.name ?? 'Data source', step: 'computed', at } };
       history.push({ field: c.field, value });

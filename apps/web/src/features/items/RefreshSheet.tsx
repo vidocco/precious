@@ -1,4 +1,5 @@
 import {
+  describeSchedule,
   type FieldDefinition,
   type FillSource,
   formatValue,
@@ -9,10 +10,10 @@ import {
 } from '@precious/shared';
 import { useEffect, useState } from 'react';
 import { errorMessage } from '../../api/client.ts';
-import { importRemoteImage, useItemMutations, useLookupMutations } from '../../api/queries.ts';
+import { importRemoteImage, useComputedMutations, useItemMutations, useLookupMutations } from '../../api/queries.ts';
 import { MatchChooser } from '../../components/MatchChooser.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
-import { Button, Caps, ErrorBox, Spinner } from '../../components/ui.tsx';
+import { Button, Caps, cx, ErrorBox, Spinner } from '../../components/ui.tsx';
 import { LOCALE } from '../../lib/format.ts';
 
 function show(target: string, value: unknown, fields: FieldDefinition[]) {
@@ -31,7 +32,8 @@ const labelOf = (target: string, fields: FieldDefinition[]) =>
 
 /**
  * Refresh: runs the template's lookups again from the item's stored refs and shows
- * what would change. Values edited by hand are listed but never changed.
+ * what would change. Values edited by hand are listed but never changed. Values kept
+ * up to date on a schedule can be updated now from here too.
  */
 export function RefreshSheet({
   item,
@@ -44,6 +46,10 @@ export function RefreshSheet({
 }) {
   const { refresh } = useLookupMutations();
   const { update } = useItemMutations();
+  const { computeItem } = useComputedMutations();
+  const canLookUp = template.bindings.steps.length > 0 && Object.keys(item.externalRefs).length > 0;
+  const scheduled = template.bindings.computed.filter((c) => c.kind === 'source');
+  const [computeNote, setComputeNote] = useState('');
   const [result, setResult] = useState<RefreshResult | null>(null);
   const [error, setError] = useState('');
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -66,7 +72,7 @@ export function RefreshSheet({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when the sheet opens
   useEffect(() => {
-    void run({});
+    if (canLookUp) void run({});
   }, []);
 
   const toggle = (target: string) =>
@@ -108,7 +114,27 @@ export function RefreshSheet({
   }
 
   const nothing =
-    result && result.changes.length === 0 && !result.cover && result.pending.length === 0 && asked.length === 0;
+    !canLookUp ||
+    (result && result.changes.length === 0 && !result.cover && result.pending.length === 0 && asked.length === 0);
+
+  async function updateScheduled() {
+    setComputeNote('');
+    try {
+      const r = await computeItem.mutateAsync(item.id);
+      const label = (f: string) => labelOf(f, fields);
+      setComputeNote(
+        [
+          r.updated.length ? `Updated ${r.updated.map(label).join(', ')}.` : '',
+          ...r.failed.map((f) => `${label(f.field)}: ${f.message}.`),
+          r.skipped.length ? `${r.skipped.map(label).join(', ')}: unchanged (edited by hand, or no value found).` : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+    } catch (err) {
+      setComputeNote(errorMessage(err));
+    }
+  }
   const count = picked.size;
 
   return (
@@ -117,7 +143,7 @@ export function RefreshSheet({
       onOpenChange={(open) => !open && onClose()}
       className="dark-scope"
       title={`Refresh ${item.title}`}
-      subtitle="Looks the item up again in its data sources"
+      subtitle={canLookUp ? 'Looks the item up again in its data sources' : 'Values kept up to date from data sources'}
       footer={
         <>
           {!nothing && (
@@ -131,7 +157,7 @@ export function RefreshSheet({
     >
       <div className="grid gap-4">
         {error && <ErrorBox>{error}</ErrorBox>}
-        {!result && !error && <Spinner label="Looking it up" />}
+        {canLookUp && !result && !error && <Spinner label="Looking it up" />}
         {asked.map((p) => (
           <MatchChooser
             key={p.step}
@@ -145,7 +171,7 @@ export function RefreshSheet({
             }}
           />
         ))}
-        {nothing && <p className="text-ink-muted">Everything is up to date.</p>}
+        {canLookUp && nothing && <p className="text-ink-muted">Everything is up to date.</p>}
         {result && (result.changes.length > 0 || result.cover) && (
           <div className="grid gap-1.5">
             <Caps>Changes</Caps>
@@ -203,6 +229,32 @@ export function RefreshSheet({
               <li key={`${w.step}-${w.target}-${w.message}`}>{w.message}</li>
             ))}
           </ul>
+        )}
+        {scheduled.length > 0 && (
+          <div className={cx('grid gap-1.5', canLookUp && 'border-t border-line pt-3')}>
+            <Caps>Kept up to date</Caps>
+            <ul className="m-0 grid list-none gap-0.5 p-0 text-[0.88rem]">
+              {scheduled.map((c) => (
+                <li key={c.field} className="flex flex-wrap items-baseline gap-x-2">
+                  <b className="font-medium">{labelOf(c.field, fields)}</b>
+                  <span className="text-ink-muted">· {c.kind === 'source' && describeSchedule(c.schedule)}</span>
+                  {item.fieldMeta[c.field]?.error && (
+                    <span className="text-warn">· last try failed: {item.fieldMeta[c.field]?.error}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" icon="refresh" onClick={() => void updateScheduled()} disabled={computeItem.isPending}>
+                {computeItem.isPending ? 'Updating…' : 'Update them now'}
+              </Button>
+              {computeNote && (
+                <span className="text-[0.85rem] text-ink-muted" role="status">
+                  {computeNote}
+                </span>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </Sheet>

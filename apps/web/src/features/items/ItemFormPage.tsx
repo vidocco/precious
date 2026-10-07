@@ -3,6 +3,7 @@ import {
   type FieldDefinition,
   type FillResult,
   type FillSource,
+  formatValue,
   type ItemDto,
   type PendingMatch,
 } from '@precious/shared';
@@ -21,7 +22,7 @@ import {
 } from '../../api/queries.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { MatchChooser } from '../../components/MatchChooser.tsx';
-import { Button, Caps, cx, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
+import { Button, Caps, cx, ErrorBox, Field, Spinner, TextField } from '../../components/ui.tsx';
 import { type Draft, getDraft } from '../../lib/drafts.ts';
 import { FieldInput, type FormValue } from './FieldInput.tsx';
 
@@ -332,27 +333,53 @@ export function ItemFormPage({ mode }: { mode: 'create' | 'edit' }) {
               autoFocus={mode === 'create'}
             />
           </div>
-          {fields.map((f) => (
-            <FieldInput
-              key={f.id}
-              field={f}
-              value={values[f.id]}
-              users={users}
-              error={errors[f.id]}
-              aside={
-                fill && (
-                  <SourceTag
-                    source={values[f.id] === undefined ? undefined : fill.sources[f.id]}
-                    edited={edited.has(f.id)}
-                  />
-                )
-              }
-              onChange={(v) => {
-                markEdited(f.id);
-                setValues((prev) => ({ ...prev, [f.id]: v }));
-              }}
-            />
-          ))}
+          {fields.map((f) => {
+            const computed = template.data?.bindings.computed.find((c) => c.field === f.id);
+            if (computed?.kind === 'formula') {
+              const shown = values[f.id] === undefined ? '' : formatValue(f, values[f.id]);
+              return (
+                <Field
+                  key={f.id}
+                  label={f.label}
+                  aside={<span className="text-[0.72rem] font-medium text-ink-faint">Calculated</span>}
+                >
+                  <div className="rounded-[9px] border border-dashed border-line px-3 py-2 text-[0.93rem] text-ink-muted">
+                    {shown || 'Worked out when you save'}
+                  </div>
+                </Field>
+              );
+            }
+            return (
+              <FieldInput
+                key={f.id}
+                field={f}
+                value={values[f.id]}
+                users={users}
+                error={errors[f.id]}
+                aside={
+                  fill ? (
+                    <SourceTag
+                      source={values[f.id] === undefined ? undefined : fill.sources[f.id]}
+                      edited={edited.has(f.id)}
+                    />
+                  ) : (
+                    computed && (
+                      <span
+                        className="text-[0.72rem] font-medium text-ink-faint"
+                        title="Looked up again on a schedule. Typing a value here keeps yours instead."
+                      >
+                        Kept up to date
+                      </span>
+                    )
+                  )
+                }
+                onChange={(v) => {
+                  markEdited(f.id);
+                  setValues((prev) => ({ ...prev, [f.id]: v }));
+                }}
+              />
+            );
+          })}
         </div>
       </div>
       {fill && fill.warnings.length > 0 && (

@@ -31,6 +31,7 @@ import {
   Spinner,
   TextInput,
 } from '../../components/ui.tsx';
+import { ComputedSection } from './ComputedSection.tsx';
 import { move } from './editorUtils.ts';
 
 type SetT = (patch: Partial<TemplateData>) => void;
@@ -57,7 +58,7 @@ function indexEndpoints(sources: SourceDto[]) {
   return byId;
 }
 
-function EndpointSelect({
+export function EndpointSelect({
   sources,
   endpointRole: role,
   value,
@@ -65,7 +66,7 @@ function EndpointSelect({
   label,
 }: {
   sources: SourceDto[];
-  endpointRole: 'search' | 'lookup';
+  endpointRole: EndpointDto['role'];
   value: string;
   onChange: (id: string) => void;
   label: string;
@@ -152,7 +153,7 @@ function FillTable({
   );
 }
 
-function Card({ title, actions, children }: { title: ReactNode; actions?: ReactNode; children: ReactNode }) {
+export function Card({ title, actions, children }: { title: ReactNode; actions?: ReactNode; children: ReactNode }) {
   return (
     <div className="grid gap-3 rounded-[12px] border border-line bg-surface p-3.5">
       <div className="flex items-center gap-2">
@@ -176,7 +177,18 @@ function MoveButtons({ onMove, onRemove, what }: { onMove: (d: -1 | 1) => void; 
 
 const small = 'text-[0.85rem] text-ink-muted';
 
-export function BindingsTab({ t, set }: { t: TemplateData; set: SetT }) {
+export function BindingsTab({
+  t,
+  set,
+  templateId,
+  saved,
+}: {
+  t: TemplateData;
+  set: SetT;
+  /** The saved template, for the status of values kept up to date. */
+  templateId?: string;
+  saved?: Bindings;
+}) {
   const sources = useSources();
   if (sources.isPending) return <Spinner />;
   if (sources.isError) return <ErrorBox>{errorMessage(sources.error)}</ErrorBox>;
@@ -188,29 +200,14 @@ export function BindingsTab({ t, set }: { t: TemplateData; set: SetT }) {
   const setB = (patch: Partial<Bindings>) => set({ bindings: { ...b, ...patch } });
   const takenIds = () => [...b.search.map((p) => p.id), ...b.steps.map((s) => s.id)];
 
-  if (searchEps.length === 0) {
-    return (
-      <EmptyState
-        title="No search endpoints yet"
-        action={
-          <Link to="/data/sources" className="font-semibold">
-            Go to data sources
-          </Link>
-        }
-      >
-        Add a data source with a search endpoint (or install a preset) first. Then come back to choose which one finds
-        items of this template.
-      </EmptyState>
-    );
-  }
-
   const setProvider = (i: number, p: Partial<SearchProvider>) =>
     setB({ search: b.search.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   const setStep = (i: number, s: Partial<EnrichStep>) =>
     setB({ steps: b.steps.map((x, j) => (j === i ? { ...x, ...s } : x)) });
 
   function addProvider() {
-    const e = searchEps[0] as EndpointDto;
+    const e = searchEps[0];
+    if (!e) return;
     const info = byId.get(e.id) as EndpointInfo;
     const id = makeFieldId(info.source.name, takenIds());
     // Use the ref name the source's own lookups expect, so they find the picked result.
@@ -269,6 +266,19 @@ export function BindingsTab({ t, set }: { t: TemplateData; set: SetT }) {
               it can.
             </p>
           </div>
+          {searchEps.length === 0 && (
+            <EmptyState
+              title="No search endpoints yet"
+              action={
+                <Link to="/data/sources" className="font-semibold">
+                  Go to data sources
+                </Link>
+              }
+            >
+              Add a data source with a search endpoint (or install a preset) first. Then come back to choose which one
+              finds items of this template.
+            </EmptyState>
+          )}
           {b.search.map((p, i) => {
             const info = byId.get(p.endpointId);
             return (
@@ -319,11 +329,13 @@ export function BindingsTab({ t, set }: { t: TemplateData; set: SetT }) {
               </Card>
             );
           })}
-          <div>
-            <Button icon="plus" onClick={addProvider}>
-              Add a search
-            </Button>
-          </div>
+          {searchEps.length > 0 && (
+            <div>
+              <Button icon="plus" onClick={addProvider}>
+                Add a search
+              </Button>
+            </div>
+          )}
         </section>
 
         <section className="grid gap-2.5">
@@ -508,6 +520,8 @@ export function BindingsTab({ t, set }: { t: TemplateData; set: SetT }) {
             {lookupEps.length === 0 && <p className={cx(small, 'mt-1.5')}>No data source has a lookup endpoint yet.</p>}
           </div>
         </section>
+
+        <ComputedSection t={t} setB={setB} sources={list} templateId={templateId} saved={saved} />
       </div>
       {b.search.length > 0 && <TryPanel t={t} byId={byId} />}
     </div>

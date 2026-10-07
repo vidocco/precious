@@ -23,6 +23,7 @@ import {
 import { refLabel, refValue } from '../../lib/format.ts';
 import { useDebounced, useStoredState } from '../../lib/hooks.ts';
 import { AddSheet } from '../items/AddSheet.tsx';
+import { CollectionHistory } from './CollectionHistory.tsx';
 import { VISIBILITY_LABEL } from './labels.ts';
 
 const PAGE = 60;
@@ -313,6 +314,7 @@ export function CollectionPage() {
     <div data-accent={c.accent} className="relative grid gap-5 px-4 pt-6 pb-28 sm:px-8 sm:pt-8">
       <Header collection={c} template={t} />
       {figures.data && <Figures figures={figures.data} />}
+      <CollectionHistory collectionId={c.id} template={t} />
 
       <div className="flex flex-wrap items-center gap-2">
         <label

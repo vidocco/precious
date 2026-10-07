@@ -40,6 +40,7 @@ describe.runIf(TEST_DATABASE_URL)('values kept up to date', () => {
       '/price/a': (_req, res) =>
         prices.a === null ? json(res, { error: 'gone' }, 404) : json(res, { price: prices.a }),
       '/price/b': (_req, res) => json(res, { price: prices.b }),
+      '/price/c': (_req, res) => json(res, { note: 'not sold any more' }),
     });
     const s = await admin.post<SourceDto>('/api/sources', {
       name: 'Prices',
@@ -206,6 +207,22 @@ describe.runIf(TEST_DATABASE_URL)('values kept up to date', () => {
     const now = await member.post<{ item: ItemDto; updated: string[] }>(`/api/items/${itemA.id}/compute`);
     expect(now.body.updated).toEqual(['price']);
     expect(now.body.item.data).toMatchObject({ price: 31, per_hour: 3.1 });
+  });
+
+  it('treats "no value" as an answer, not a failure', async () => {
+    const c = (
+      await member.post<ItemDto>(`/api/collections/${collection.id}/items`, {
+        title: 'C',
+        data: { hours: 2 },
+        externalRefs: { shop: 'c' },
+      })
+    ).body;
+    await dueNow(server.database.db, { itemIds: [c.id] });
+    await runDue(env());
+    const after = await get(c.id);
+    expect(after.data.price).toBeUndefined();
+    expect(after.fieldMeta.price?.error).toBeUndefined();
+    expect((await state(c.id))[0]?.failures ?? 0).toBe(0);
   });
 
   it('follows template changes: formulas, schedules and removed fields', async () => {

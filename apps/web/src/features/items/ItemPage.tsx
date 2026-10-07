@@ -1,8 +1,10 @@
+import { isNumericType } from '@precious/shared';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useState } from 'react';
 import { errorMessage } from '../../api/client.ts';
 import { useCollection, useItem, useItemMutations, useTemplate, useUsers } from '../../api/queries.ts';
 import { Button, ConfirmStrip, ErrorBox, Spinner } from '../../components/ui.tsx';
+import { ItemHistory } from './ItemHistory.tsx';
 import { ItemView } from './ItemView.tsx';
 import { RefreshSheet } from './RefreshSheet.tsx';
 
@@ -33,7 +35,10 @@ export function ItemPage() {
   }
   const it = item.data;
   const c = collection.data;
-  const canRefresh = c.canEdit && template.data.bindings.steps.length > 0 && Object.keys(it.externalRefs).length > 0;
+  const scheduled = template.data.bindings.computed.filter((x) => x.kind === 'source');
+  const canRefresh =
+    c.canEdit &&
+    ((template.data.bindings.steps.length > 0 && Object.keys(it.externalRefs).length > 0) || scheduled.length > 0);
 
   return (
     <div className="dark-scope min-h-[calc(100dvh-57px)]">
@@ -88,7 +93,7 @@ export function ItemPage() {
           }}
         />
       )}
-      <div className="grid gap-4 px-4 pt-6 pb-16 sm:px-8 md:pl-12">
+      <div className="grid gap-4 px-4 pt-6 pb-4 sm:px-8 md:pl-12">
         {error && <ErrorBox>{error}</ErrorBox>}
         <ItemView
           item={it}
@@ -102,6 +107,12 @@ export function ItemPage() {
               : undefined
           }
         />
+      </div>
+      <div className="grid gap-4 px-4 pb-16 sm:px-8 md:pl-12 lg:grid-cols-2">
+        {scheduled.map((x) => {
+          const field = template.data?.fields.find((f) => f.id === x.field);
+          return field && isNumericType(field.type) ? <ItemHistory key={x.field} itemId={it.id} field={field} /> : null;
+        })}
       </div>
       {refreshing && <RefreshSheet item={it} template={template.data} onClose={() => setRefreshing(false)} />}
     </div>

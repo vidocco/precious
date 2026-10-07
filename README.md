@@ -6,7 +6,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full plan and [`design/mockups/index.
 
 ## Status
 
-Milestones 1 to 3 are done: a working household collection manager, the data source engine, and adding items by searching data sources.
+Milestones 1 to 4 are done: a working household collection manager, the data source engine, adding items by searching data sources, and values kept up to date.
 
 - First-run setup creates the admin; admins add the rest of the household.
 - Templates (five starters included) define each kind of collection: its fields, what shows on and under each cover, the item page layout and the header figures.
@@ -16,7 +16,9 @@ Milestones 1 to 3 are done: a working household collection manager, the data sou
 
 - **Search to add**: a template's Data sources tab picks which searches find its items and which lookups fill in its fields, including lookups in other sources that find their own match (and ask you when it's unclear). It can be tried before saving. The **+** on a collection then searches; the picked result opens the item form filled in, with where each value came from. **Refresh** on an item looks it up again and never changes values edited by hand (those can be unlocked). Collections can skip the review with quick add.
 
-Next: values kept up to date on a schedule (e.g. a daily price), and collection dashboards.
+- **Keep up to date** (same tab): look a field up again on a schedule (every few hours, daily, weekly or monthly; a price, a rating) or calculate it from other fields with a formula (price per hour). Failed lookups keep the last good value, say why, and retry within the hour; values edited by hand are left alone. Every value is kept as history, charted on the item page and as a collection total.
+
+Next: polish and PWA (install, shelf view, view transitions, barcode scan, CSV import).
 
 ## Layout
 

@@ -253,7 +253,14 @@ export function TemplateEditorPage({ mode }: { mode: 'create' | 'edit' }) {
               on another field such as the platform.
             </EmptyState>
           )}
-          {tab === 'Data sources' && <BindingsTab t={t} set={set} />}
+          {tab === 'Data sources' && (
+            <BindingsTab
+              t={t}
+              set={set}
+              templateId={mode === 'edit' ? params.templateId : undefined}
+              saved={mode === 'edit' ? source.data?.bindings : undefined}
+            />
+          )}
         </div>
       </fieldset>
     </div>

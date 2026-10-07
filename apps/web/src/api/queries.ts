@@ -2,12 +2,17 @@ import type {
   CollectionDto,
   CollectionInput,
   CollectionUpdate,
+  ComputedStatus,
   CreateUserInput,
   EndpointDto,
   EndpointInput,
   FigureValue,
   FillResult,
+  FormulaTryInput,
+  FormulaTryResult,
+  HistoryPoint,
   ItemDto,
+  ItemHistoryPoint,
   ItemInput,
   ItemListQuery,
   ItemListResponse,
@@ -260,6 +265,55 @@ export function useLookupMutations() {
 
 export const importRemoteImage = (input: RemoteImageInput) =>
   api.post<{ id: string; width: number; height: number; color: string | null }>('/api/images/remote', input);
+
+// ---------------------------------------------------------------- values kept up to date
+
+export const useComputedStatus = (templateId: string | undefined) =>
+  useQuery({
+    queryKey: ['computed', templateId],
+    queryFn: () => api.get<ComputedStatus[]>(`/api/templates/${templateId}/computed`),
+    enabled: !!templateId,
+    refetchInterval: 15_000,
+  });
+
+export const useItemHistory = (itemId: string, field: string | undefined) =>
+  useQuery({
+    queryKey: ['items', itemId, 'history', field],
+    queryFn: () => api.get<ItemHistoryPoint[]>(`/api/items/${itemId}/history${qs({ field })}`),
+    enabled: !!field,
+  });
+
+export const useCollectionHistory = (collectionId: string, field: string | undefined, days = 90) =>
+  useQuery({
+    queryKey: ['collections', collectionId, 'history', field, days],
+    queryFn: () =>
+      api.get<HistoryPoint[]>(`/api/collections/${collectionId}/history${qs({ field, days: String(days) })}`),
+    enabled: !!field,
+  });
+
+export function useComputedMutations() {
+  const qc = useQueryClient();
+  return {
+    runField: useMutation({
+      mutationFn: ({ templateId, field }: { templateId: string; field: string }) =>
+        api.post<ComputedStatus[]>(`/api/templates/${templateId}/computed/${field}/run`),
+      onSuccess: (status, { templateId }) => qc.setQueryData(['computed', templateId], status),
+    }),
+    computeItem: useMutation({
+      mutationFn: (itemId: string) =>
+        api.post<{ item: ItemDto; updated: string[]; failed: { field: string; message: string }[]; skipped: string[] }>(
+          `/api/items/${itemId}/compute`,
+        ),
+      onSuccess: (r) => {
+        qc.setQueryData(keys.item(r.item.id), r.item);
+        qc.invalidateQueries({ queryKey: ['items', r.item.id, 'history'] });
+        qc.invalidateQueries({ queryKey: keys.collections });
+      },
+    }),
+  };
+}
+
+export const tryFormula = (input: FormulaTryInput) => api.post<FormulaTryResult>('/api/formula/try', input);
 
 // ---------------------------------------------------------------- search & public
 

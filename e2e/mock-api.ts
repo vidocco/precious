@@ -1,7 +1,7 @@
 /**
  * Stand-in for remote APIs and websites during end-to-end tests:
  * a JSON search that needs an API key, an HTML release page, and two
- * keyless databases (games and playtimes) for adding items.
+ * keyless databases (games and playtimes) for adding items, and a price list.
  */
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -14,6 +14,7 @@ const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64',
 );
+let price = 20;
 let game: Record<string, unknown> = { developer: 'Hollowpine Studio', genres: ['Adventure'] };
 
 createServer((req, res) => {
@@ -62,6 +63,11 @@ createServer((req, res) => {
     ]);
   }
   if (url.pathname === '/times/t2') return json({ main: 1410 });
+  if (url.pathname === '/price/x') return json({ price });
+  if (url.pathname === '/price/bump') {
+    price = 24;
+    return json({ price });
+  }
   if (url.pathname === '/cover.png') {
     res.setHeader('content-type', 'image/png');
     return res.end(PNG);

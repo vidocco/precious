@@ -197,10 +197,10 @@ Render the templates (context: `query`, `item`, `refs`, `secrets`, `previous` st
 
 ## Computed fields
 
-- Config: endpoint + input template + JSONata mapping + cron (`0 4 * * *`) + "also run on create".
-- A pg-boss dispatcher finds due (item, field) pairs and fans out jobs that respect each source's rate limit. On failure the last good value is kept and the error shows as a subtle badge on the field.
+- Config (in `templates.bindings.computed`): a compute endpoint + a schedule (every N hours, daily, weekly or monthly at a time, in the server's time zone; friendlier than cron and enough for a household) + "also run on create".
+- A `computed_state` table holds each (item, field)'s next run. An in-process scheduler claims due rows every minute (`FOR UPDATE SKIP LOCKED`, so overlapping ticks never double-run) and runs them a few items at a time; each source's rate limiter spaces the requests. pg-boss turned out unnecessary for a single-process app. On failure the last good value is kept, the error shows as a subtle badge on the field, and it retries within the hour (three times) before waiting for the schedule. "No value" is an answer, not a failure.
 - **Local derived fields** need no API, just JSONata over the item (e.g. `value / hltb_main` = cost per hour). This is cheap because the engine already exists.
-- Collection dashboard: count, total value (SQL SUM over the JSONB field), a value-over-time chart from `computed_values`.
+- Collection dashboard: count, total value (SQL SUM over the JSONB field), a value-over-time chart from `computed_values` (each item counts with its latest value that day); each item also charts its own history.
 
 ## Aesthetic direction
 

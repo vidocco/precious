@@ -10,6 +10,20 @@ function sourceLabel(item: ItemDto, ref: string, users?: UserDto[], onUnlock?: (
   if (!meta) return null;
   const who =
     meta.source === 'user' ? (users?.find((u) => u.id === meta.by)?.name.split(' ')[0] ?? 'You') : meta.source;
+  if (meta.error) {
+    const when = meta.errorAt
+      ? new Date(meta.errorAt).toLocaleString(LOCALE, { dateStyle: 'medium', timeStyle: 'short' })
+      : '';
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[0.64rem] whitespace-nowrap text-warn"
+        title={`Couldn’t update ${when}: ${meta.error}. Showing the last value${meta.at ? ` from ${new Date(meta.at).toLocaleDateString(LOCALE)}` : ''}.`}
+      >
+        <Icon name="refresh" size={11} />
+        {who} · out of date
+      </span>
+    );
+  }
   if (meta.locked && onUnlock) {
     return (
       <button
