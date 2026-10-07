@@ -163,13 +163,13 @@ export const templateInputSchema = z
       if (ref && !known(ref)) ctx.addIssue({ code: 'custom', path, message: `Unknown field "${ref}"` });
     };
     for (const slot of ['tl', 'tr', 'b'] as const) check(t.card.slots[slot], ['card', 'slots', slot]);
-    t.card.lines.forEach((l, i) => {
-      l.fields.forEach((r, j) => check(r, ['card', 'lines', i, 'fields', j]));
-    });
-    t.itemLayout.info.forEach((r, i) => check(r, ['itemLayout', 'info', i]));
-    t.itemLayout.sections.forEach((s, i) => {
-      s.fields.forEach((r, j) => check(r, ['itemLayout', 'sections', i, 'fields', j]));
-    });
+    for (const [i, l] of t.card.lines.entries()) {
+      for (const [j, r] of l.fields.entries()) check(r, ['card', 'lines', i, 'fields', j]);
+    }
+    for (const [i, r] of t.itemLayout.info.entries()) check(r, ['itemLayout', 'info', i]);
+    for (const [i, s] of t.itemLayout.sections.entries()) {
+      for (const [j, r] of s.fields.entries()) check(r, ['itemLayout', 'sections', i, 'fields', j]);
+    }
     t.header.figures.forEach((f, i) => {
       if (f.kind === 'count') return;
       const field = t.fields.find((x) => x.id === f.field);
