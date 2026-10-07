@@ -1,0 +1,135 @@
+/*
+ * Precious design tokens.
+ *
+ * Direction: a collector's cabinet. Cool gallery-wall neutrals let the covers
+ * carry the colour; each collection brings its own accent; gilt is reserved
+ * for value (what makes things "precious").
+ *
+ * Every colour is defined on bare :root (light), then redefined for dark under
+ * prefers-color-scheme (unless the user forced light) and under data-theme="dark".
+ */
+:root {
+  /* Surfaces */
+  --wall: #eceef1;
+  --surface: #f8f9fb;
+  --surface-sunk: #e2e5ea;
+  --line: #d3d8df;
+
+  /* Ink */
+  --ink: #16181d;
+  --ink-muted: #5a6070;
+  --ink-faint: #8a90a0;
+
+  /* Accent: overridden per collection via data-accent or an inline --accent */
+  --accent: #3445d8;
+  --accent-ink: #ffffff;
+
+  /* Value / worth */
+  --gilt: #9a7020;
+  --gilt-soft: #efe3c4;
+
+  /* Semantic */
+  --ok: #2f7a4a;
+  --warn: #a8641a;
+  --danger: #b3263a;
+
+  /* Type */
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Type scale (1.25, anchored at 16px) */
+  --step--1: 0.8rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.563rem;
+  --step-3: 1.953rem;
+  --step-4: 2.441rem;
+  --step-5: 3.815rem;
+
+  /* Shape & depth: covers are objects, chrome is flat */
+  --radius-cover: 3px;
+  --radius-control: 10px;
+  --radius-sheet: 22px;
+  --shadow-object: 0 1px 1px rgb(20 24 32 / 0.08), 0 8px 18px -6px rgb(20 24 32 / 0.28);
+
+  color-scheme: light;
+}
+
+/* Collection accents (light) */
+[data-accent="ultramarine"] {
+  --accent: #3445d8;
+}
+[data-accent="oxblood"] {
+  --accent: #9b2335;
+}
+[data-accent="moss"] {
+  --accent: #3f6b3a;
+}
+[data-accent="saffron"] {
+  --accent: #b26a00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wall: #111318;
+    --surface: #1a1d24;
+    --surface-sunk: #0c0e12;
+    --line: #2a2e38;
+    --ink: #e9ebf0;
+    --ink-muted: #a0a6b4;
+    --ink-faint: #6c7282;
+    --accent: #8592ff;
+    --accent-ink: #0d0f1a;
+    --gilt: #dcb662;
+    --gilt-soft: #3a3020;
+    --ok: #6cc28c;
+    --warn: #e2a35a;
+    --danger: #f07a8a;
+    --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+    color-scheme: dark;
+  }
+  :root:not([data-theme="light"]) [data-accent="ultramarine"] {
+    --accent: #8592ff;
+  }
+  :root:not([data-theme="light"]) [data-accent="oxblood"] {
+    --accent: #ec7385;
+  }
+  :root:not([data-theme="light"]) [data-accent="moss"] {
+    --accent: #93c78a;
+  }
+  :root:not([data-theme="light"]) [data-accent="saffron"] {
+    --accent: #f0ad4e;
+  }
+}
+
+:root[data-theme="dark"] {
+  --wall: #111318;
+  --surface: #1a1d24;
+  --surface-sunk: #0c0e12;
+  --line: #2a2e38;
+  --ink: #e9ebf0;
+  --ink-muted: #a0a6b4;
+  --ink-faint: #6c7282;
+  --accent: #8592ff;
+  --accent-ink: #0d0f1a;
+  --gilt: #dcb662;
+  --gilt-soft: #3a3020;
+  --ok: #6cc28c;
+  --warn: #e2a35a;
+  --danger: #f07a8a;
+  --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+:root[data-theme="dark"] [data-accent="ultramarine"] {
+  --accent: #8592ff;
+}
+:root[data-theme="dark"] [data-accent="oxblood"] {
+  --accent: #ec7385;
+}
+:root[data-theme="dark"] [data-accent="moss"] {
+  --accent: #93c78a;
+}
+:root[data-theme="dark"] [data-accent="saffron"] {
+  --accent: #f0ad4e;
+}

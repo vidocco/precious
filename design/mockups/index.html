@@ -1,0 +1,716 @@
+<title>Precious Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
+<style>
+/* Layout: one app "screen" per section, stacked; covers are objects on a cool gallery wall, chrome stays flat. */
+:root {
+  --wall: #eceef1;
+  --surface: #f8f9fb;
+  --surface-sunk: #e2e5ea;
+  --line: #d3d8df;
+  --ink: #16181d;
+  --ink-muted: #5a6070;
+  --ink-faint: #8a90a0;
+  --accent: #3445d8;
+  --accent-ink: #ffffff;
+  --gilt: #9a7020;
+  --gilt-soft: #efe3c4;
+  --ok: #2f7a4a;
+  --warn: #a8641a;
+  --code-key: #7a3fb0;
+  --code-str: #2f7a4a;
+  --code-num: #a8641a;
+  --shadow-object: 0 1px 1px rgb(20 24 32 / 0.08), 0 8px 18px -6px rgb(20 24 32 / 0.28);
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --step--1: 0.8rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.563rem;
+  --step-3: 1.953rem;
+  --step-4: 2.441rem;
+  --step-5: 3.815rem;
+}
+:root [data-accent="ultramarine"] { --accent: #3445d8; }
+:root [data-accent="oxblood"] { --accent: #9b2335; }
+:root [data-accent="moss"] { --accent: #3f6b3a; }
+:root [data-accent="saffron"] { --accent: #b26a00; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wall: #111318; --surface: #1a1d24; --surface-sunk: #0c0e12; --line: #2a2e38;
+    --ink: #e9ebf0; --ink-muted: #a0a6b4; --ink-faint: #6c7282;
+    --accent: #8592ff; --accent-ink: #0d0f1a;
+    --gilt: #dcb662; --gilt-soft: #3a3020; --ok: #6cc28c; --warn: #e2a35a;
+    --code-key: #c9a2f2; --code-str: #8fd3a5; --code-num: #f0b979;
+    --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+    color-scheme: dark;
+  }
+  :root:not([data-theme="light"]) [data-accent="ultramarine"] { --accent: #8592ff; }
+  :root:not([data-theme="light"]) [data-accent="oxblood"] { --accent: #ec7385; }
+  :root:not([data-theme="light"]) [data-accent="moss"] { --accent: #93c78a; }
+  :root:not([data-theme="light"]) [data-accent="saffron"] { --accent: #f0ad4e; }
+}
+:root[data-theme="dark"] {
+  --wall: #111318; --surface: #1a1d24; --surface-sunk: #0c0e12; --line: #2a2e38;
+  --ink: #e9ebf0; --ink-muted: #a0a6b4; --ink-faint: #6c7282;
+  --accent: #8592ff; --accent-ink: #0d0f1a;
+  --gilt: #dcb662; --gilt-soft: #3a3020; --ok: #6cc28c; --warn: #e2a35a;
+  --code-key: #c9a2f2; --code-str: #8fd3a5; --code-num: #f0b979;
+  --shadow-object: 0 1px 1px rgb(0 0 0 / 0.4), 0 10px 22px -6px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+:root[data-theme="dark"] [data-accent="ultramarine"] { --accent: #8592ff; }
+:root[data-theme="dark"] [data-accent="oxblood"] { --accent: #ec7385; }
+:root[data-theme="dark"] [data-accent="moss"] { --accent: #93c78a; }
+:root[data-theme="dark"] [data-accent="saffron"] { --accent: #f0ad4e; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.05; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-data); font-size: var(--step--1); }
+.muted { color: var(--ink-muted); }
+.label { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+.page { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 96px; display: flex; flex-direction: column; gap: 72px; }
+@media (min-width: 720px) { .page { padding-inline: 32px; } }
+
+/* Intro */
+.intro { display: grid; gap: 20px; }
+.intro h1 { font-size: clamp(2.6rem, 8vw, var(--step-5)); font-weight: 750; font-stretch: 85%; letter-spacing: -0.02em; }
+.intro p { max-width: 62ch; color: var(--ink-muted); font-size: var(--step-1); line-height: 1.4; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a { font-family: var(--font-data); font-size: var(--step--1); color: var(--ink); text-decoration: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.toc a:hover { border-color: var(--ink-faint); }
+
+/* A "screen" frame */
+.screen { display: grid; gap: 14px; }
+.screen-caption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+.screen-caption h2 { font-size: var(--step-2); font-weight: 650; }
+.screen-caption p { max-width: 60ch; color: var(--ink-muted); }
+.frame { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; min-width: 0; }
+
+/* App chrome inside a frame */
+.app { display: grid; grid-template-columns: 1fr; min-height: 560px; }
+@media (min-width: 900px) { .app { grid-template-columns: 220px 1fr; } }
+.rail { display: none; border-right: 1px solid var(--line); padding: 20px 14px; flex-direction: column; gap: 22px; background: var(--wall); }
+@media (min-width: 900px) { .rail { display: flex; } }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: var(--step-1); }
+.brand svg { width: 26px; height: 26px; }
+.rail nav { display: flex; flex-direction: column; gap: 2px; }
+.rail a { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; color: var(--ink); text-decoration: none; font-size: 0.94rem; }
+.rail a .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+.rail a .count { font-family: var(--font-data); font-size: 0.72rem; color: var(--ink-faint); }
+.rail a[aria-current="page"] { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-weight: 600; }
+.rail .who { margin-top: auto; display: flex; gap: 8px; align-items: center; color: var(--ink-muted); font-size: 0.88rem; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; color: #fff; }
+
+.main { padding: 22px 18px 28px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+@media (min-width: 720px) { .main { padding: 28px 32px 36px; } }
+
+/* Collection header */
+.col-head { display: grid; gap: 18px; grid-template-columns: 1fr; align-items: end; }
+@media (min-width: 760px) { .col-head { grid-template-columns: 1fr auto; } }
+.col-title { display: grid; gap: 6px; }
+.col-title h3 { font-size: clamp(2rem, 6vw, var(--step-4)); font-weight: 760; font-stretch: 80%; letter-spacing: -0.02em; }
+.col-title h3 .tick { color: var(--accent); }
+.worth { display: grid; grid-template-columns: auto 160px; gap: 4px 16px; align-items: end; padding: 12px 16px; border-radius: 14px; background: var(--gilt-soft); }
+.worth .amount { font-family: var(--font-display); font-size: var(--step-3); font-weight: 650; color: var(--gilt); line-height: 1; }
+.worth .delta { font-family: var(--font-data); font-size: 0.72rem; color: var(--ok); }
+.worth svg { grid-row: 1 / span 3; grid-column: 2; width: 160px; height: 56px; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font-size: 0.86rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.toolbar .spacer { flex: 1; }
+.views { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.views span { font-family: var(--font-data); font-size: 0.74rem; padding: 6px 10px; color: var(--ink-muted); }
+.views span.on { background: var(--surface-sunk); color: var(--ink); }
+.btn-add { border: 0; border-radius: 10px; padding: 8px 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
+
+/* Wall */
+.wall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 18px; }
+@media (min-width: 560px) { .wall { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 760px) { .wall { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .wall { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.card { display: grid; gap: 8px; min-width: 0; }
+.card .meta { display: grid; gap: 1px; }
+.card .t { font-weight: 600; font-size: 0.94rem; line-height: 1.25; }
+.card .row { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-data); font-size: 0.72rem; color: var(--ink-muted); }
+.card .row .v { color: var(--gilt); }
+.cover { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border-radius: 3px; overflow: hidden; box-shadow: var(--shadow-object); transition: transform 240ms cubic-bezier(.2,.7,.2,1); }
+.card:hover .cover { transform: translateY(-4px) rotate(-0.6deg); }
+.cover.square { aspect-ratio: 1; }
+.cover .ct { position: absolute; inset: auto 10px 10px 10px; text-shadow: 0 1px 10px rgb(0 0 0 / 0.35); font-family: var(--font-display); font-weight: 750; font-stretch: 78%; line-height: 0.95; letter-spacing: -0.01em; font-size: 1.05rem; }
+.cover .cs { position: absolute; top: 9px; left: 10px; font-family: var(--font-data); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.8; }
+.acc { position: absolute; top: 8px; right: 8px; font-family: var(--font-data); font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: rgb(255 255 255 / 0.86); color: #16181d; }
+
+/* Shelf */
+.shelf-wrap { display: grid; gap: 28px; }
+.shelf { position: relative; display: flex; align-items: flex-end; gap: 3px; padding: 0 12px; min-height: 260px; overflow-x: auto; }
+.shelf::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: var(--surface-sunk); border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; }
+.shelf-inner { display: flex; align-items: flex-end; gap: 3px; padding-bottom: 10px; }
+.spine { flex: none; position: relative; border-radius: 2px 2px 0 0; box-shadow: inset -3px 0 0 rgb(0 0 0 / 0.12), inset 2px 0 0 rgb(255 255 255 / 0.12); display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 10px 0 8px; transition: transform 200ms ease; cursor: default; }
+.spine:hover { transform: translateY(-10px); }
+.spine .st { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--font-display); font-weight: 650; font-stretch: 80%; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 75%; }
+.spine .sa { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--font-data); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+.spine.lean { transform-origin: bottom left; transform: rotate(-7deg) translateX(6px); margin-right: 12px; }
+.shelf-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+
+/* Item page */
+.item { --tint: #c77d3a; display: grid; gap: 28px; padding: 22px 18px 32px; background: linear-gradient(180deg, color-mix(in oklab, var(--tint) 30%, var(--surface)) 0%, var(--surface) 62%); }
+@media (min-width: 720px) { .item { padding: 34px 36px 40px; } }
+.crumbs { font-family: var(--font-data); font-size: 0.74rem; color: var(--ink-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.item-grid { display: grid; gap: 28px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .item-grid { grid-template-columns: minmax(220px, 300px) 1fr; gap: 44px; } }
+.item-cover { max-width: 300px; width: 100%; }
+.item-cover .cover { box-shadow: 0 2px 2px rgb(20 24 32 / 0.12), 0 28px 50px -18px rgb(20 24 32 / 0.55); }
+.item-cover .cover .ct { font-size: 2rem; inset: auto 18px 18px 18px; }
+.item-cover .cover .cs { top: 16px; left: 18px; font-size: 0.7rem; }
+.item-body { display: grid; gap: 24px; min-width: 0; align-content: start; }
+.item-body h3 { font-size: clamp(2.2rem, 6vw, var(--step-5)); font-weight: 780; font-stretch: 78%; letter-spacing: -0.025em; }
+.item-sub { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--ink-muted); align-items: center; }
+.pill { font-family: var(--font-data); font-size: 0.7rem; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted); }
+.pill.ok { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 40%, var(--line)); }
+.fields { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--line); }
+@media (min-width: 620px) { .fields { grid-template-columns: 1fr 1fr; column-gap: 32px; } }
+.field { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.field dt { font-family: var(--font-data); font-size: 0.72rem; color: var(--ink-muted); letter-spacing: 0.04em; }
+.field dd { margin: 0; font-weight: 500; min-width: 0; }
+.src { font-family: var(--font-data); font-size: 0.62rem; color: var(--ink-faint); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+.src svg { width: 10px; height: 10px; }
+.value-panel { display: grid; gap: 14px; padding: 18px 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.value-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 20px; }
+.value-top .amount { font-family: var(--font-display); font-size: var(--step-4); font-weight: 650; color: var(--gilt); line-height: 1; }
+.value-panel svg { width: 100%; height: 120px; display: block; }
+.axis { font-family: var(--font-data); font-size: 10px; fill: var(--ink-faint); }
+
+/* Source console */
+.console { display: grid; grid-template-rows: auto 1fr; }
+.console-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--wall); }
+.console-bar .ep { font-family: var(--font-display); font-weight: 650; font-size: var(--step-1); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 6px 12px; font-family: var(--font-data); font-size: 0.74rem; color: var(--ink-muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 5px 6px 5px 12px; font-family: var(--font-data); font-size: 0.8rem; }
+.input input { border: 0; background: none; font: inherit; color: var(--ink); width: 9rem; outline: none; }
+.run { border: 0; border-radius: 7px; padding: 5px 12px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-family: var(--font-body); font-size: 0.85rem; cursor: pointer; }
+.status { font-family: var(--font-data); font-size: 0.74rem; color: var(--ok); }
+.panes { display: grid; grid-template-columns: 1fr; min-width: 0; }
+@media (min-width: 1000px) { .panes { grid-template-columns: 1.15fr 1fr 0.9fr; } }
+.pane { display: grid; grid-template-rows: auto 1fr; min-width: 0; border-bottom: 1px solid var(--line); }
+@media (min-width: 1000px) { .pane { border-bottom: 0; border-right: 1px solid var(--line); } .pane:last-child { border-right: 0; } }
+.pane-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.pane-b { padding: 14px 16px; overflow-x: auto; min-width: 0; }
+pre.code { margin: 0; font-family: var(--font-data); font-size: 0.76rem; line-height: 1.7; white-space: pre; }
+.k { color: var(--code-key); cursor: pointer; border-radius: 3px; }
+.k:hover, .k.hl { background: color-mix(in oklab, var(--accent) 18%, transparent); }
+.s { color: var(--code-str); }
+.n { color: var(--code-num); }
+.c { color: var(--ink-faint); }
+.map-rows { display: grid; gap: 8px; }
+.map-row { display: grid; gap: 4px; }
+.map-row .lhs { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-muted); }
+.map-row .rhs { font-family: var(--font-data); font-size: 0.78rem; padding: 7px 10px; border-radius: 8px; background: var(--surface-sunk); border: 1px solid transparent; overflow-x: auto; white-space: nowrap; }
+.map-row .rhs.focus { border-color: var(--accent); }
+.out-list { display: grid; gap: 10px; }
+.out { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; min-width: 0; }
+.out .cover { box-shadow: none; }
+.out .cover .ct { font-size: 0.42rem; inset: auto 4px 4px 4px; }
+.out .t { font-weight: 600; font-size: 0.9rem; line-height: 1.2; }
+.out .m { font-family: var(--font-data); font-size: 0.68rem; color: var(--ink-muted); }
+
+/* HTML picker preview */
+.site { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; color: #222; font-family: Georgia, serif; }
+.site-bar { display: flex; gap: 6px; align-items: center; padding: 6px 10px; background: #eef0f3; font-family: var(--font-data); font-size: 0.66rem; color: #5a6070; }
+.site-body { padding: 14px; display: grid; grid-template-columns: 70px 1fr; gap: 12px; }
+.site-body .art { aspect-ratio: 1; background: linear-gradient(135deg, #2a3b55, #c48a4a); }
+.site-body h4 { margin: 0 0 4px; font-size: 1rem; }
+.site-body .yr { font-size: 0.8rem; color: #666; }
+.site-body table { grid-column: 1 / -1; width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.site-body td { padding: 3px 4px; border-top: 1px solid #e3e3e3; }
+.picked { outline: 2px solid #3445d8; outline-offset: 1px; background: rgb(52 69 216 / 0.08); }
+.pick-tip { display: inline-block; margin-top: 10px; font-family: var(--font-data); font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--surface); }
+
+.foot { color: var(--ink-muted); font-size: 0.9rem; max-width: 70ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cover, .spine { transition: none; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <span class="label">Precious · design direction · milestone 0</span>
+    <h1>A cabinet, not a spreadsheet.</h1>
+    <p>Four screens to agree on before any components get built. Covers carry the colour, every collection brings its own accent, and gilt only appears where something is worth money. Every cover here is generated, with invented titles.</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#wall">Wall</a>
+      <a href="#shelf">Shelf</a>
+      <a href="#item">Item page</a>
+      <a href="#console">Source console</a>
+    </nav>
+  </header>
+
+  <!-- WALL -->
+  <section class="screen" id="wall">
+    <div class="screen-caption">
+      <h2>Wall</h2>
+      <p>The default view. Covers first, three lines of metadata, the accession number in the corner. Value appears in gilt and is refreshed nightly.</p>
+    </div>
+    <div class="frame">
+      <div class="app" data-accent="ultramarine">
+        <aside class="rail">
+          <div class="brand">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6 25 13 16 26 7 13Z" fill="none" stroke="var(--gilt)" stroke-width="2.2" stroke-linejoin="round"/><path d="M7 13h18M12 13l4 13 4-13M12 13l4-7 4 7" fill="none" stroke="var(--gilt)" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Precious
+          </div>
+          <div class="label">Household</div>
+          <nav>
+            <a href="#wall" aria-current="page" data-accent="ultramarine"><span class="dot"></span>Video games<span class="count">142</span></a>
+            <a href="#shelf" data-accent="moss"><span class="dot"></span>Books<span class="count">506</span></a>
+            <a href="#wall" data-accent="oxblood"><span class="dot"></span>Vinyl<span class="count">318</span></a>
+            <a href="#wall" data-accent="saffron"><span class="dot"></span>Board games<span class="count">37</span></a>
+          </nav>
+          <div class="label">Private</div>
+          <nav>
+            <a href="#wall" data-accent="moss"><span class="dot"></span>Pressed flowers<span class="count">24</span></a>
+          </nav>
+          <div class="who"><span class="avatar" style="background:#6d4fb3">MV</span>Marta · admin</div>
+        </aside>
+        <div class="main">
+          <div class="col-head">
+            <div class="col-title">
+              <span class="label">Collection · VG · shared with household</span>
+              <h3>Video games<span class="tick">.</span></h3>
+              <p class="muted">142 items · 9 platforms · 31 still in the backlog</p>
+            </div>
+            <div class="worth">
+              <span class="label">Estimated value</span>
+              <span class="amount num">€4,318.60</span>
+              <span class="delta">+€212.40 in 90 days</span>
+              <svg id="worth-spark" viewBox="0 0 160 56" role="img" aria-label="Collection value over the last 90 days, rising from €4,106 to €4,319"></svg>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="chip" aria-pressed="true">All</button>
+            <button class="chip" aria-pressed="false">Switch</button>
+            <button class="chip" aria-pressed="false">PS5</button>
+            <button class="chip" aria-pressed="false">PC</button>
+            <button class="chip" aria-pressed="false">Backlog</button>
+            <span class="spacer"></span>
+            <span class="views" aria-label="View"><span class="on">Wall</span><span>Shelf</span><span>Table</span><span>List</span></span>
+            <button class="btn-add">Add item</button>
+          </div>
+          <div class="wall" id="wall-grid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHELF -->
+  <section class="screen" id="shelf">
+    <div class="screen-caption">
+      <h2>Shelf</h2>
+      <p>Spines are generated, not scanned. Width comes from page count and height from the book's real height in centimetres, so a shelf looks like your shelf.</p>
+    </div>
+    <div class="frame">
+      <div class="main" data-accent="moss">
+        <div class="col-head">
+          <div class="col-title">
+            <span class="label">Collection · BK · shared with household</span>
+            <h3>Books<span class="tick" style="color:var(--accent)">.</span></h3>
+            <p class="muted">506 books · 4 shelves shown · sorted by author</p>
+          </div>
+          <span class="views" aria-label="View"><span>Wall</span><span class="on">Shelf</span><span>Table</span><span>List</span></span>
+        </div>
+        <div class="shelf-wrap" id="shelves"></div>
+        <div class="shelf-legend mono muted">
+          <span>1 mm of spine ≈ 9 pages</span>
+          <span>Tallest: 24.0 cm</span>
+          <span>Shortest: 17.8 cm</span>
+          <span>Leaning book = currently lent out</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ITEM -->
+  <section class="screen" id="item">
+    <div class="screen-caption">
+      <h2>Item page</h2>
+      <p>The cover's dominant colour washes the top of the page. Every field shows where its value came from, and a lock means a person edited it, so a refresh won't overwrite it.</p>
+    </div>
+    <div class="frame">
+      <article class="item" data-accent="ultramarine">
+        <div class="crumbs"><span>Video games</span><span>/</span><span>VG·0142</span></div>
+        <div class="item-grid">
+          <div class="item-cover" id="item-cover"></div>
+          <div class="item-body">
+            <div class="col-title">
+              <span class="label">Acquired 3 Nov 2024 · added by Marta</span>
+              <h3>Lanterns of Vell</h3>
+              <div class="item-sub">
+                <span>Hollowpine Studio</span><span>·</span><span>2019</span>
+                <span class="pill">Switch</span><span class="pill ok">Completed</span>
+              </div>
+            </div>
+            <dl class="fields">
+              <div class="field"><dt>Platform</dt><dd>Nintendo Switch</dd><span class="src">IGDB</span></div>
+              <div class="field"><dt>Genre</dt><dd>Adventure, Puzzle</dd><span class="src">IGDB</span></div>
+              <div class="field"><dt>Main story</dt><dd class="num">23½ h</dd><span class="src">HLTB</span></div>
+              <div class="field"><dt>Completionist</dt><dd class="num">41 h</dd><span class="src">HLTB</span></div>
+              <div class="field"><dt>Edition</dt><dd>Lantern Box (physical)</dd><span class="src"><svg viewBox="0 0 10 10" aria-label="Locked"><rect x="1.5" y="4.5" width="7" height="5" rx="1" fill="currentColor"/><path d="M3 4.5V3a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Marta</span></div>
+              <div class="field"><dt>Box weight</dt><dd class="num">412 g</dd><span class="src">Manual</span></div>
+              <div class="field"><dt>Condition</dt><dd>Very good, sleeve scuffed</dd><span class="src">Manual</span></div>
+              <div class="field"><dt>Cost per hour</dt><dd class="num">€2.74</dd><span class="src">Derived</span></div>
+            </dl>
+            <div class="value-panel">
+              <div class="value-top">
+                <div>
+                  <span class="label">Value · loose + box</span>
+                  <div class="amount num">€64.50</div>
+                </div>
+                <span class="mono muted">Updated today 04:00 · price source</span>
+              </div>
+              <svg id="item-chart" viewBox="0 0 600 120" role="img" aria-label="Value over the last 12 months, from €48.00 to €64.50"></svg>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CONSOLE -->
+  <section class="screen" id="console">
+    <div class="screen-caption">
+      <h2>Source console</h2>
+      <p>Where an admin teaches Precious a new data source. Run a sample, see the raw response, write the mapping, watch the result update. Switch the kind to see the HTML picker.</p>
+    </div>
+    <div class="frame">
+      <div class="console" data-accent="ultramarine">
+        <div class="console-bar">
+          <span class="ep">IGDB · search</span>
+          <div class="seg" role="group" aria-label="Request kind">
+            <button id="kind-rest" aria-pressed="true">REST</button>
+            <button id="kind-gql" aria-pressed="false">GraphQL</button>
+            <button id="kind-html" aria-pressed="false">HTML</button>
+          </div>
+          <label class="input" for="sample-q">query<input id="sample-q" value="lanterns"><button class="run" type="button">Run</button></label>
+          <span class="status">200 · 184 ms · 3 results</span>
+        </div>
+        <div class="panes">
+          <div class="pane">
+            <div class="pane-h"><span class="label" id="raw-label">Raw response</span><span class="mono muted" id="raw-hint">click a key to insert its path</span></div>
+            <div class="pane-b" id="raw-pane"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="label" id="map-label">Mapping · JSONata</span><span class="mono muted">role: search</span></div>
+            <div class="pane-b"><div class="map-rows" id="map-rows"></div></div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="label">Result</span><span class="mono" style="color:var(--ok)">valid</span></div>
+            <div class="pane-b"><div class="out-list" id="out-list"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Typefaces: Bricolage Grotesque for display, Instrument Sans for the interface, IBM Plex Mono for numbers, codes and anything a machine wrote. Light and dark follow the system setting.</p>
+</div>
+
+<script>
+(function () {
+  // Generated covers: pattern + two colours + typography. Invented titles only.
+  function cover(it, opts) {
+    opts = opts || {};
+    var a = it.c[0], b = it.c[1], ink = it.ink || '#fff';
+    var bg;
+    switch (it.p) {
+      case 'orb': bg = 'radial-gradient(circle at 62% 38%, ' + b + ' 0 26%, transparent 26.5%), radial-gradient(circle at 62% 38%, transparent 0 34%, ' + b + '33 34.5% 36%, transparent 36.5%), ' + a; break;
+      case 'stripe': bg = 'linear-gradient(0deg, ' + a + ' 0 30%, transparent 30%), repeating-linear-gradient(-28deg, ' + a + ' 0 14px, ' + b + ' 14px 17px), ' + a; break;
+      case 'split': bg = 'linear-gradient(160deg, ' + a + ' 0 54%, ' + b + ' 54.3%)'; break;
+      case 'grid': bg = 'repeating-linear-gradient(0deg, ' + b + '55 0 1px, transparent 1px 18px), repeating-linear-gradient(90deg, ' + b + '55 0 1px, transparent 1px 18px), ' + a; break;
+      case 'sun': bg = 'radial-gradient(ellipse at 50% 110%, ' + b + ' 0 38%, transparent 38.5%), linear-gradient(180deg, ' + a + ', ' + b + '88)'; break;
+      default: bg = 'linear-gradient(135deg, ' + a + ', ' + b + ')';
+    }
+    var el = document.createElement('div');
+    el.className = 'cover' + (opts.square ? ' square' : '');
+    el.style.background = bg;
+    el.style.color = ink;
+    el.innerHTML = '<span class="cs">' + (it.cs || '') + '</span><span class="ct">' + it.t + '</span>' + (opts.acc ? '<span class="acc">' + opts.acc + '</span>' : '');
+    return el;
+  }
+
+  var games = [
+    { t: 'Lanterns of Vell', cs: 'Switch', c: ['#1d2a44', '#e3a24a'], p: 'orb', v: 64.5, y: 2019 },
+    { t: 'Salt & Cinder', cs: 'PS5', c: ['#3b1d1a', '#e2643c'], p: 'stripe', v: 38.0, y: 2022 },
+    { t: 'Moth Protocol', cs: 'PC', c: ['#d9d4c7', '#2a2a2a'], p: 'grid', ink: '#1b1b1b', v: 12.9, y: 2017 },
+    { t: 'The Quiet Orchard', cs: 'Switch', c: ['#2f4a33', '#cfe0a2'], p: 'sun', v: 41.0, y: 2021 },
+    { t: 'Sunken Choir', cs: 'PS4', c: ['#0f3b4a', '#7fd1c7'], p: 'orb', v: 27.5, y: 2018 },
+    { t: 'Kilnheart', cs: 'PS5', c: ['#5a1f2b', '#f2c14e'], p: 'split', v: 52.0, y: 2023 },
+    { t: 'Paper Saints', cs: 'Switch', c: ['#efe6d6', '#c2412d'], p: 'stripe', ink: '#2a1b14', v: 89.9, y: 2016 },
+    { t: 'Ferrous Bloom', cs: 'PC', c: ['#2b2f36', '#b8c4d6'], p: 'split', v: 9.5, y: 2020 },
+    { t: 'Wake of the Ninth Bell', cs: 'GameCube', c: ['#3d2d5c', '#f0d9a7'], p: 'sun', v: 214.0, y: 2004 },
+    { t: 'Tidewright', cs: 'Switch', c: ['#0d4f6c', '#f5e9c9'], p: 'grid', v: 33.0, y: 2022 },
+    { t: 'Glasswing', cs: 'PS2', c: ['#14161c', '#9fe3f0'], p: 'orb', v: 46.0, y: 2005 },
+    { t: 'Overgrowth Radio', cs: 'PC', c: ['#3e5a1e', '#e9e36a'], p: 'stripe', v: 14.0, y: 2024 }
+  ];
+
+  var fmt = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' });
+
+  var grid = document.getElementById('wall-grid');
+  games.forEach(function (g, i) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.appendChild(cover(g, { acc: 'VG·' + String(142 - i).padStart(4, '0') }));
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = '<span class="t">' + g.t + '</span><span class="row"><span>' + g.cs + ' · ' + g.y + '</span><span class="v num">' + fmt.format(g.v) + '</span></span>';
+    card.appendChild(meta);
+    grid.appendChild(card);
+  });
+
+  // Charts: one scale per chart, labels only at values the data reaches.
+  function chart(svg, data, w, h, pad, opts) {
+    var min = Math.min.apply(null, data), max = Math.max.apply(null, data);
+    var x = function (i) { return pad.l + (i / (data.length - 1)) * (w - pad.l - pad.r); };
+    var y = function (v) { return pad.t + (1 - (v - min) / (max - min)) * (h - pad.t - pad.b); };
+    var line = data.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+    var area = line + ' L' + x(data.length - 1).toFixed(1) + ' ' + (h - pad.b) + ' L' + x(0).toFixed(1) + ' ' + (h - pad.b) + ' Z';
+    var last = data.length - 1;
+    var out = '';
+    if (opts.grid) {
+      [min, max].forEach(function (v) {
+        out += '<line x1="' + pad.l + '" x2="' + (w - pad.r) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-dasharray="2 4"/>';
+        out += '<text class="axis" x="' + (pad.l - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + fmt.format(v) + '</text>';
+      });
+      opts.months.forEach(function (m, i) {
+        out += '<text class="axis" x="' + x(m[0]) + '" y="' + (h - 2) + '" text-anchor="' + (i === 0 ? 'start' : i === opts.months.length - 1 ? 'end' : 'middle') + '">' + m[1] + '</text>';
+      });
+    }
+    out += '<path d="' + area + '" fill="var(--gilt)" fill-opacity="0.14"/>';
+    out += '<path d="' + line + '" fill="none" stroke="var(--gilt)" stroke-width="' + (opts.sw || 2) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    out += '<circle cx="' + x(last) + '" cy="' + y(data[last]) + '" r="' + (opts.r || 3.5) + '" fill="var(--gilt)" stroke="var(--surface)" stroke-width="2"/>';
+    svg.innerHTML = out;
+  }
+
+  var worth = [4106, 4110, 4098, 4121, 4135, 4129, 4150, 4168, 4161, 4190, 4204, 4199, 4231, 4248, 4262, 4255, 4281, 4296, 4310, 4318.6];
+  chart(document.getElementById('worth-spark'), worth, 160, 56, { l: 4, r: 6, t: 6, b: 6 }, { sw: 1.8, r: 3 });
+
+  var itemVals = [48, 48, 49.5, 51, 50, 52.5, 55, 54, 57.5, 59, 61, 60.5, 63, 64.5];
+  chart(document.getElementById('item-chart'), itemVals, 600, 120, { l: 64, r: 10, t: 10, b: 18 }, {
+    grid: true,
+    months: [[0, 'Oct 2025'], [6.5, 'Apr'], [13, 'Oct 2026']]
+  });
+
+  var lanterns = games[0];
+  document.getElementById('item-cover').appendChild(cover(lanterns));
+  document.querySelector('.item').style.setProperty('--tint', '#e3a24a');
+
+  // Shelf: width from pages (≈9 pages per mm, 1 mm ≈ 1.6 px), height from cm.
+  var books = [
+    { t: 'The Salt Archive', a: 'Okonkwo', pages: 412, cm: 23.4, c: '#2f4a33', ink: '#f2ead8' },
+    { t: 'Small Hours', a: 'Arrieta', pages: 188, cm: 19.8, c: '#e5d6b8', ink: '#3a2a18' },
+    { t: 'A Grammar of Rivers', a: 'Bélanger', pages: 640, cm: 24.0, c: '#7a2e2e', ink: '#f6e3c8' },
+    { t: 'Copperplate', a: 'Haddad', pages: 296, cm: 21.0, c: '#1f3550', ink: '#e8d9a8' },
+    { t: 'Field Notes for Ghosts', a: 'Ilunga', pages: 224, cm: 20.3, c: '#d8c24a', ink: '#24210f', lean: true },
+    { t: 'The Glass Orchard', a: 'Kowalczyk', pages: 512, cm: 23.0, c: '#46325f', ink: '#efe4ff' },
+    { t: 'Ledger', a: 'Moreno', pages: 144, cm: 17.8, c: '#c96f3b', ink: '#fff3e6' },
+    { t: 'Winter Inventory', a: 'Nakashima', pages: 352, cm: 22.2, c: '#dfe4e6', ink: '#24303a' },
+    { t: 'Brine', a: 'Ó Riada', pages: 208, cm: 19.0, c: '#2b6a6a', ink: '#e9fbf6' },
+    { t: 'The Weight of Lanterns', a: 'Pereira', pages: 688, cm: 23.8, c: '#141821', ink: '#dcb662' },
+    { t: 'Moss & Iron', a: 'Quist', pages: 276, cm: 21.6, c: '#55703a', ink: '#f3f6e4' },
+    { t: 'Nine Rooms', a: 'Ruiz', pages: 160, cm: 18.4, c: '#b7a6d6', ink: '#221a33' },
+    { t: 'Common Birds of the Coast', a: 'Sørensen', pages: 432, cm: 24.0, c: '#e9e0cf', ink: '#2a3b2c' },
+    { t: 'The Tin Saint', a: 'Tavares', pages: 240, cm: 20.6, c: '#8a2333', ink: '#fbe7ea' },
+    { t: 'Undertow', a: 'Uribe', pages: 320, cm: 21.4, c: '#1d4e89', ink: '#e8f0ff' },
+    { t: 'Paper Lanterns', a: 'Vasquez', pages: 196, cm: 19.4, c: '#f1b84b', ink: '#2b1d05' }
+  ];
+  var shelves = document.getElementById('shelves');
+  [books.slice(0, 8), books.slice(8)].forEach(function (row) {
+    var shelf = document.createElement('div');
+    shelf.className = 'shelf';
+    var inner = document.createElement('div');
+    inner.className = 'shelf-inner';
+    row.forEach(function (bk) {
+      var s = document.createElement('div');
+      s.className = 'spine' + (bk.lean ? ' lean' : '');
+      s.style.width = Math.max(22, Math.round(bk.pages / 9 * 1.6)) + 'px';
+      s.style.height = Math.round(bk.cm * 10) + 'px';
+      s.style.background = bk.c;
+      s.style.color = bk.ink;
+      s.title = bk.t + ' · ' + bk.a + ' · ' + bk.pages + ' pages · ' + bk.cm.toFixed(1) + ' cm';
+      s.innerHTML = '<span class="st">' + bk.t + '</span><span class="sa">' + bk.a + '</span>';
+      inner.appendChild(s);
+    });
+    shelf.appendChild(inner);
+    shelves.appendChild(shelf);
+  });
+
+  // Console
+  var restRaw =
+    '<span class="c">// POST https://api.igdb.com/v4/games</span>\n' +
+    '[\n' +
+    '  {\n' +
+    '    <span class="k" data-path="id">"id"</span>: <span class="n">201844</span>,\n' +
+    '    <span class="k" data-path="name">"name"</span>: <span class="s">"Lanterns of Vell"</span>,\n' +
+    '    <span class="k" data-path="first_release_date">"first_release_date"</span>: <span class="n">1563494400</span>,\n' +
+    '    <span class="k" data-path="cover.image_id">"cover"</span>: { <span class="k" data-path="cover.image_id">"image_id"</span>: <span class="s">"co4x1v"</span> },\n' +
+    '    <span class="k" data-path="platforms.name">"platforms"</span>: [ { <span class="k" data-path="platforms.name">"name"</span>: <span class="s">"Nintendo Switch"</span> } ]\n' +
+    '  },\n' +
+    '  {\n' +
+    '    <span class="k" data-path="id">"id"</span>: <span class="n">233017</span>,\n' +
+    '    <span class="k" data-path="name">"name"</span>: <span class="s">"Lanterns of Vell: Ember Tide"</span>,\n' +
+    '    <span class="c">…</span>\n' +
+    '  }\n' +
+    ']';
+  var gqlRaw =
+    '<span class="c">// POST https://graphql.example.org · variables { "search": "lanterns" }</span>\n' +
+    '{\n' +
+    '  <span class="k" data-path="data">"data"</span>: {\n' +
+    '    <span class="k" data-path="Page.media">"Page"</span>: { <span class="k" data-path="Page.media">"media"</span>: [\n' +
+    '      {\n' +
+    '        <span class="k" data-path="id">"id"</span>: <span class="n">98213</span>,\n' +
+    '        <span class="k" data-path="title.english">"title"</span>: { <span class="k" data-path="title.english">"english"</span>: <span class="s">"Lanterns of Vell"</span> },\n' +
+    '        <span class="k" data-path="coverImage.large">"coverImage"</span>: { <span class="k" data-path="coverImage.large">"large"</span>: <span class="s">"https://…/98213.jpg"</span> },\n' +
+    '        <span class="k" data-path="startDate.year">"startDate"</span>: { <span class="k" data-path="startDate.year">"year"</span>: <span class="n">2019</span> }\n' +
+    '      }\n' +
+    '    ] }\n' +
+    '  },\n' +
+    '  <span class="k" data-path="errors">"errors"</span>: <span class="c">none</span>\n' +
+    '}';
+  var htmlRaw =
+    '<div class="site">' +
+      '<div class="site-bar">records.example.com/release/88141 · scripts removed</div>' +
+      '<div class="site-body">' +
+        '<div class="art"></div>' +
+        '<div><h4>Low Tide Sermons</h4><div class="yr">The Marrows · 1998 · 180 g LP</div></div>' +
+        '<table><tbody>' +
+          '<tr class="picked"><td>A1</td><td>Harbour Hymn</td><td>4:12</td></tr>' +
+          '<tr class="picked"><td>A2</td><td>Brine Choir</td><td>3:47</td></tr>' +
+          '<tr class="picked"><td>B1</td><td>The Long Ebb</td><td>6:05</td></tr>' +
+        '</tbody></table>' +
+      '</div>' +
+    '</div>' +
+    '<span class="pick-tip">table.tracklist tr · 3 matches</span>';
+
+  var maps = {
+    rest: [
+      ['results', '$'],
+      ['id', 'id'],
+      ['title', 'name'],
+      ['subtitle', "$join(platforms.name, ' · ')"],
+      ['year', "$fromMillis(first_release_date*1000, '[Y]')"],
+      ['image', "'https://images.igdb.com/…/' & cover.image_id & '.jpg'"]
+    ],
+    gql: [
+      ['results', 'Page.media'],
+      ['id', 'id'],
+      ['title', 'title.english ? title.english : title.romaji'],
+      ['image', 'coverImage.large'],
+      ['year', 'startDate.year']
+    ],
+    html: [
+      ['title', '{ css: "h1.release-title", value: text }'],
+      ['year', '{ css: ".meta .year", regex: "(\\d{4})", as: number }'],
+      ['tracks', '{ css: "table.tracklist tr", many: true, fields: … }'],
+      ['  .position', '{ css: "td:nth-child(1)", value: text }'],
+      ['  .name', '{ css: "td:nth-child(2)", value: text }'],
+      ['  .length', '{ xpath: "./td[3]/text()", value: text }']
+    ]
+  };
+  var outs = {
+    rest: [
+      { it: games[0], sub: 'Nintendo Switch · 2019' },
+      { it: { t: 'Ember Tide', c: ['#40201a', '#f08a4b'], p: 'orb' }, sub: 'Nintendo Switch, PC · 2023' },
+      { it: { t: 'Lantern Keep', c: ['#20302a', '#b9d68a'], p: 'split' }, sub: 'PC · 2015' }
+    ],
+    gql: [
+      { it: games[0], sub: '2019' }
+    ],
+    html: [
+      { it: { t: 'Low Tide Sermons', c: ['#2a3b55', '#c48a4a'], p: 'sun' }, sub: '1998 · 3 tracks · A1 Harbour Hymn 4:12', square: true }
+    ]
+  };
+  var labels = {
+    rest: ['Raw response', 'click a key to insert its path', 'Mapping · JSONata', 'IGDB · search', '200 · 184 ms · 3 results'],
+    gql: ['Raw response', 'click a key to insert its path', 'Mapping · JSONata', 'Anime catalogue · search', '200 · 96 ms · 1 result · no errors'],
+    html: ['Page preview', 'click an element to pick it', 'Extract · selectors', 'Record shop · release page', '200 · 412 ms · cached 7 d']
+  };
+
+  function renderKind(kind) {
+    ['rest', 'gql', 'html'].forEach(function (k) {
+      document.getElementById('kind-' + k).setAttribute('aria-pressed', String(k === kind));
+    });
+    var raw = document.getElementById('raw-pane');
+    raw.innerHTML = kind === 'html' ? htmlRaw : '<pre class="code">' + (kind === 'gql' ? gqlRaw : restRaw) + '</pre>';
+    var L = labels[kind];
+    document.getElementById('raw-label').textContent = L[0];
+    document.getElementById('raw-hint').textContent = L[1];
+    document.getElementById('map-label').textContent = L[2];
+    document.querySelector('.console-bar .ep').textContent = L[3];
+    document.querySelector('.console-bar .status').textContent = L[4];
+
+    var rows = document.getElementById('map-rows');
+    rows.innerHTML = '';
+    maps[kind].forEach(function (m) {
+      var r = document.createElement('div');
+      r.className = 'map-row';
+      r.innerHTML = '<span class="lhs">' + m[0] + '</span><span class="rhs"></span>';
+      r.querySelector('.rhs').textContent = m[1];
+      rows.appendChild(r);
+    });
+
+    var out = document.getElementById('out-list');
+    out.innerHTML = '';
+    outs[kind].forEach(function (o) {
+      var row = document.createElement('div');
+      row.className = 'out';
+      row.appendChild(cover(o.it, { square: o.square }));
+      var meta = document.createElement('div');
+      meta.innerHTML = '<div class="t">' + o.it.t + '</div><div class="m">' + o.sub + '</div>';
+      row.appendChild(meta);
+      out.appendChild(row);
+    });
+
+    raw.querySelectorAll('.k').forEach(function (k) {
+      k.addEventListener('click', function () {
+        raw.querySelectorAll('.k.hl').forEach(function (e) { e.classList.remove('hl'); });
+        k.classList.add('hl');
+        var path = k.getAttribute('data-path');
+        rows.querySelectorAll('.rhs').forEach(function (e) {
+          var hit = e.textContent.indexOf(path) !== -1;
+          e.classList.toggle('focus', hit);
+        });
+      });
+    });
+  }
+  ['rest', 'gql', 'html'].forEach(function (k) {
+    document.getElementById('kind-' + k).addEventListener('click', function () { renderKind(k); });
+  });
+  renderKind('rest');
+
+  document.querySelectorAll('.toolbar .chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('.toolbar .chip').forEach(function (o) { o.setAttribute('aria-pressed', String(o === c)); });
+    });
+  });
+})();
+</script>

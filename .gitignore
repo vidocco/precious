@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Build output
+dist
+*.tsbuildinfo
+.vite
+dev-dist
+
