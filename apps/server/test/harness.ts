@@ -6,6 +6,7 @@ import postgres from 'postgres';
 import { type App, buildApp } from '../src/app.ts';
 import { createAuth } from '../src/auth/auth.ts';
 import { type Config, loadConfig } from '../src/config.ts';
+import { createRuntime } from '../src/connectors/runner.ts';
 import { createDb, type Database } from '../src/db/client.ts';
 import { runMigrations } from '../src/db/migrate.ts';
 import { seedStarterTemplates } from '../src/db/seed.ts';
@@ -38,13 +39,15 @@ export async function startTestServer(): Promise<TestServer> {
     PUBLIC_URL: 'http://localhost:3000',
     UPLOAD_DIR: uploadDir,
     MIGRATIONS_DIR: resolve(import.meta.dirname, '../drizzle'),
+    RECIPES_DIR: resolve(import.meta.dirname, '../../../recipes'),
     LOG_LEVEL: 'silent',
   });
   const database = createDb(config.DATABASE_URL);
   await runMigrations(database, config.MIGRATIONS_DIR);
   await seedStarterTemplates(database.db);
   const auth = createAuth(database.db, config);
-  const app = await buildApp({ config, database, auth }, { logger: false });
+  const connectors = createRuntime(database.db, config.APP_SECRET);
+  const app = await buildApp({ config, database, auth, connectors }, { logger: false });
   await app.ready();
 
   return {

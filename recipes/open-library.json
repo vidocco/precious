@@ -1,0 +1,56 @@
+{
+  "format": "precious-recipe",
+  "version": 1,
+  "source": {
+    "name": "Open Library",
+    "description": "Books from the Internet Archive's Open Library. No account needed.",
+    "baseUrl": "https://openlibrary.org",
+    "auth": { "type": "none" },
+    "headers": [],
+    "rateLimit": { "requests": 1, "perSeconds": 1 },
+    "cacheSeconds": 604800
+  },
+  "secretNames": [],
+  "endpoints": [
+    {
+      "key": "search",
+      "name": "Search books",
+      "role": "search",
+      "kind": "rest",
+      "method": "GET",
+      "path": "/search.json",
+      "query": [
+        { "name": "q", "value": "{{ query }}" },
+        { "name": "limit", "value": "20" },
+        {
+          "name": "fields",
+          "value": "key,title,subtitle,author_name,first_publish_year,cover_i,number_of_pages_median"
+        }
+      ],
+      "map": {
+        "results": "docs",
+        "id": "key",
+        "title": "title",
+        "subtitle": "$join(author_name, ', ')",
+        "year": "first_publish_year",
+        "image": "cover_i ? 'https://covers.openlibrary.org/b/id/' & cover_i & '-L.jpg'",
+        "pages": "number_of_pages_median"
+      },
+      "sample": { "query": "the left hand of darkness" }
+    },
+    {
+      "key": "work",
+      "name": "Book details",
+      "role": "lookup",
+      "kind": "rest",
+      "method": "GET",
+      "path": "{{ refs.openlibrary }}.json",
+      "map": {
+        "synopsis": "$type(description) = 'object' ? description.value : description",
+        "subjects": "subjects[[0..7]]",
+        "first_published": "first_publish_date"
+      },
+      "sample": { "refs": { "openlibrary": "/works/OL59863W" } }
+    }
+  ]
+}

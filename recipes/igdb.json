@@ -1,0 +1,61 @@
+{
+  "format": "precious-recipe",
+  "version": 1,
+  "source": {
+    "name": "IGDB",
+    "description": "Video games from IGDB (Twitch). Needs a free Twitch developer app: set clientId and clientSecret.",
+    "baseUrl": "https://api.igdb.com/v4",
+    "auth": {
+      "type": "oauth2",
+      "tokenUrl": "https://id.twitch.tv/oauth2/token",
+      "clientId": "{{ secrets.clientId }}",
+      "secret": "clientSecret"
+    },
+    "headers": [{ "name": "Client-ID", "value": "{{ secrets.clientId }}" }],
+    "rateLimit": { "requests": 4, "perSeconds": 1 },
+    "cacheSeconds": 604800
+  },
+  "secretNames": ["clientId", "clientSecret"],
+  "endpoints": [
+    {
+      "key": "search",
+      "name": "Search games",
+      "role": "search",
+      "kind": "rest",
+      "method": "POST",
+      "path": "/games",
+      "body": {
+        "type": "raw",
+        "template": "search \"{{ query | json_escape }}\";\nfields name, first_release_date, cover.image_id, platforms.name;\nlimit 20;"
+      },
+      "map": {
+        "results": "$",
+        "id": "id",
+        "title": "name",
+        "subtitle": "$join(platforms.name, ' · ')",
+        "year": "first_release_date ? $number($fromMillis(first_release_date * 1000, '[Y]'))",
+        "image": "cover.image_id ? 'https://images.igdb.com/igdb/image/upload/t_cover_big/' & cover.image_id & '.jpg'"
+      },
+      "sample": { "query": "outer wilds" }
+    },
+    {
+      "key": "details",
+      "name": "Game details",
+      "role": "lookup",
+      "kind": "rest",
+      "method": "POST",
+      "path": "/games",
+      "body": {
+        "type": "raw",
+        "template": "fields summary, genres.name, first_release_date, involved_companies.developer, involved_companies.company.name;\nwhere id = {{ refs.igdb }};"
+      },
+      "map": {
+        "summary": "summary",
+        "genre": "genres.name",
+        "developer": "involved_companies[developer].company.name",
+        "release_year": "first_release_date ? $number($fromMillis(first_release_date * 1000, '[Y]'))"
+      },
+      "sample": { "refs": { "igdb": "11737" } }
+    }
+  ]
+}

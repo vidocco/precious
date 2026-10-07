@@ -1,0 +1,59 @@
+{
+  "format": "precious-recipe",
+  "version": 1,
+  "source": {
+    "name": "AniList",
+    "description": "Anime and manga from AniList's GraphQL API. No account needed.",
+    "baseUrl": "https://graphql.anilist.co",
+    "auth": { "type": "none" },
+    "headers": [],
+    "rateLimit": { "requests": 1, "perSeconds": 1 },
+    "cacheSeconds": 259200
+  },
+  "secretNames": [],
+  "endpoints": [
+    {
+      "key": "search",
+      "name": "Search anime",
+      "role": "search",
+      "kind": "graphql",
+      "path": "/",
+      "graphql": {
+        "query": "query ($search: String) {\n  Page(perPage: 20) {\n    media(search: $search, type: ANIME, sort: SEARCH_MATCH) {\n      id\n      title { romaji english }\n      format\n      episodes\n      startDate { year }\n      coverImage { large }\n    }\n  }\n}",
+        "variables": "{ \"search\": {{ query | json }} }",
+        "useGet": false,
+        "allowPartial": false
+      },
+      "map": {
+        "results": "Page.media",
+        "id": "id",
+        "title": "title.english ? title.english : title.romaji",
+        "subtitle": "$join([format, episodes ? episodes & ' episodes'], ' · ')",
+        "year": "startDate.year",
+        "image": "coverImage.large"
+      },
+      "sample": { "query": "mushishi" }
+    },
+    {
+      "key": "details",
+      "name": "Anime details",
+      "role": "lookup",
+      "kind": "graphql",
+      "path": "/",
+      "graphql": {
+        "query": "query ($id: Int) {\n  Media(id: $id) {\n    description(asHtml: false)\n    genres\n    averageScore\n    episodes\n    studios(isMain: true) { nodes { name } }\n  }\n}",
+        "variables": "{ \"id\": {{ refs.anilist }} }",
+        "useGet": false,
+        "allowPartial": false
+      },
+      "map": {
+        "synopsis": "$replace(Media.description, /<[^>]+>/, '')",
+        "genres": "Media.genres",
+        "score": "Media.averageScore",
+        "episodes": "Media.episodes",
+        "studio": "Media.studios.nodes[0].name"
+      },
+      "sample": { "refs": { "anilist": "457" } }
+    }
+  ]
+}

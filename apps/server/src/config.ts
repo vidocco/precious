@@ -18,6 +18,8 @@ const configSchema = z.object({
   PUBLIC_URL: z.string().url().default('http://localhost:3000'),
   UPLOAD_DIR: z.string().default(resolve(serverRoot, '../../data/uploads')),
   MIGRATIONS_DIR: z.string().default(resolve(serverRoot, 'drizzle')),
+  /** Bundled data source recipes offered as presets. */
+  RECIPES_DIR: z.string().default(resolve(serverRoot, '../../recipes')),
   /** Built web app to serve. Empty in development, where Vite serves it. */
   WEB_DIST_DIR: z.string().optional(),
 });
