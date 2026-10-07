@@ -17,7 +17,7 @@ import type { AppContext } from '../context.ts';
 import type { Db } from '../db/client.ts';
 import { dataSources, endpoints } from '../db/schema.ts';
 import { badRequest, HttpError, notFound } from '../errors.ts';
-import { endpointData, endpointDto, loadSource, sourceDto } from '../services/sources.ts';
+import { endpointData, endpointDto, loadSource, sourceDto, sourceUsage } from '../services/sources.ts';
 
 function duplicateKeys(eps: { key: string }[]): string[] {
   const seen = new Set<string>();
@@ -49,15 +49,17 @@ export const sourceRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) 
   // Everyone signed in can see which sources exist (never their secrets); only admins change or run them.
   app.get('/api/sources', { schema: { tags: ['sources'] } }, async (req) => {
     const viewer = mustUser(req);
-    const [sources, eps] = await Promise.all([
+    const [sources, eps, usage] = await Promise.all([
       db.select().from(dataSources).orderBy(asc(dataSources.name)),
       db.select().from(endpoints).orderBy(asc(endpoints.name)),
+      sourceUsage(db),
     ]);
     return sources.map((s) =>
       sourceDto(
         s,
         eps.filter((e) => e.sourceId === s.id),
         viewer,
+        usage.get(s.id),
       ),
     );
   });
@@ -65,7 +67,8 @@ export const sourceRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) 
   app.get('/api/sources/:id', { schema: { tags: ['sources'], params: idParams } }, async (req) => {
     const viewer = mustUser(req);
     const { source, endpoints: eps } = await loadSource(db, req.params.id);
-    return sourceDto(source, eps, viewer);
+    const usage = await sourceUsage(db);
+    return sourceDto(source, eps, viewer, usage.get(source.id));
   });
 
   app.post('/api/sources', { schema: { tags: ['sources'], body: sourceInputSchema } }, async (req, reply) => {

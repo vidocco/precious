@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { bindingsSchema, bindingTargetIssues, EMPTY_BINDINGS } from './bindings.ts';
 
 /**
  * A template describes one kind of collection: its fields and how items are
@@ -147,6 +148,8 @@ export const templateInputSchema = z
     card: cardLayoutSchema.default({ slots: { tl: null, tr: null, b: null }, lines: [] }),
     itemLayout: itemLayoutSchema.default({ info: [], sections: [] }),
     header: headerSchema.default({ figures: [] }),
+    /** Which data sources search for items and fill in their fields. */
+    bindings: bindingsSchema.default(EMPTY_BINDINGS),
   })
   .superRefine((t, ctx) => {
     const ids = new Set<string>();
@@ -187,6 +190,7 @@ export const templateInputSchema = z
         });
       }
     });
+    for (const issue of bindingTargetIssues(t.bindings, ids)) ctx.addIssue({ code: 'custom', ...issue });
   });
 
 export type TemplateInput = z.input<typeof templateInputSchema>;

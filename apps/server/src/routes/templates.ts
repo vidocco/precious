@@ -10,6 +10,7 @@ import { collections, templates, user } from '../db/schema.ts';
 import { badRequest, forbidden, HttpError, notFound } from '../errors.ts';
 import { type TemplateRow, templateData } from '../services/collections.ts';
 import { reindexCollections } from '../services/items.ts';
+import { bindingIssues } from '../services/pipeline.ts';
 
 export const templateRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) => {
   const { db } = ctx.database;
@@ -73,8 +74,14 @@ export const templateRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx
     return toDto(t, usage.get(t.id) ?? [], viewer);
   });
 
+  async function assertBindings(body: { bindings: TemplateRow['bindings'] }) {
+    const issues = await bindingIssues(db, body.bindings);
+    if (issues.length) throw badRequest(issues[0]?.message as string, issues);
+  }
+
   app.post('/api/templates', { schema: { tags: ['templates'], body: templateInputSchema } }, async (req, reply) => {
     const viewer = mustUser(req);
+    await assertBindings(req.body);
     const [t] = await db
       .insert(templates)
       .values({ ...req.body, createdBy: viewer.id })
@@ -98,6 +105,7 @@ export const templateRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx
           problems.map((message) => ({ path: 'fields', message })),
         );
       }
+      await assertBindings(req.body);
       const [t] = await db
         .update(templates)
         .set({ ...req.body, version: before.version + 1 })

@@ -12,8 +12,8 @@ const TABS = ['Fields', 'Card', 'Item page', 'Collection header', 'Shelf', 'Data
 type Tab = (typeof TABS)[number];
 
 function toData(t: TemplateDto): TemplateData {
-  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header } = t;
-  return structuredClone({ name, description, icon, accessionPrefix, fields, card, itemLayout, header });
+  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings } = t;
+  return structuredClone({ name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings });
 }
 
 /** Drops layout references to fields that no longer exist. */

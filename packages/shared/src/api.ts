@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { TemplateData } from './template.ts';
+import { bindingSlugSchema, bindingsSchema, bindingTargetSchema, choicesSchema } from './bindings.ts';
+import { fieldSchema, type TemplateData } from './template.ts';
 
 /** Request bodies and response shapes shared by the server and the web app. */
 
@@ -75,10 +76,24 @@ export const collectionInputSchema = z.object({
   defaultView: z.enum(VIEWS).default('wall'),
   visibility: z.enum(VISIBILITIES).default('household'),
   editAccess: z.enum(EDIT_ACCESS).default('owner'),
+  /** Adds a found item straight away when nothing needs checking, skipping the review. */
+  quickAdd: z.boolean().default(false),
 });
 export type CollectionInput = z.input<typeof collectionInputSchema>;
 
-export const collectionUpdateSchema = collectionInputSchema.partial().omit({ templateId: true });
+/** Every setting optional and without defaults, so changing one leaves the others alone. */
+export const collectionUpdateSchema = z
+  .object({
+    name: collectionInputSchema.shape.name,
+    accent: z.enum(ACCENTS),
+    icon: z.string().max(32),
+    accessionPrefix: collectionInputSchema.shape.accessionPrefix,
+    defaultView: z.enum(VIEWS),
+    visibility: z.enum(VISIBILITIES),
+    editAccess: z.enum(EDIT_ACCESS),
+    quickAdd: z.boolean(),
+  })
+  .partial();
 export type CollectionUpdate = z.input<typeof collectionUpdateSchema>;
 
 export interface CollectionDto {
@@ -94,6 +109,7 @@ export interface CollectionDto {
   visibility: Visibility;
   publicSlug: string | null;
   editAccess: EditAccess;
+  quickAdd: boolean;
   itemCount: number;
   createdAt: string;
   updatedAt: string;
@@ -113,18 +129,35 @@ export interface FigureValue {
 
 // ---------------------------------------------------------------- items
 
+const fillSourceSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  step: bindingSlugSchema,
+  url: z.string().max(4000).optional(),
+});
+
 export const itemInputSchema = z.object({
   title: z.string().trim().min(1, 'Give it a title').max(300),
   coverImageId: z.string().uuid().nullable().optional(),
   data: z.record(z.string(), z.unknown()).default({}),
+  /** Ids in the data sources this item was found in, e.g. { igdb: "1942" }. */
+  externalRefs: z.record(bindingSlugSchema, z.string().min(1).max(200)).optional(),
+  /** Values that came from a data source (target → source). Everything else counts as typed by hand. */
+  sources: z.record(bindingTargetSchema, fillSourceSchema).optional(),
 });
 export type ItemInput = z.input<typeof itemInputSchema>;
 
-export const itemUpdateSchema = itemInputSchema.partial();
+export const itemUpdateSchema = itemInputSchema.partial().extend({
+  /** Fields to unlock, so a refresh can update them again. */
+  unlock: z.array(bindingTargetSchema).max(100).optional(),
+});
 export type ItemUpdate = z.input<typeof itemUpdateSchema>;
 
 export interface FieldMeta {
   source: 'user' | string;
+  /** The binding provider or step that filled it. */
+  step?: string;
+  /** For the cover: where it was downloaded from. */
+  url?: string;
   locked?: boolean;
   by?: string;
   at?: string;
@@ -146,6 +179,7 @@ export interface ItemDto {
   cover: CoverDto | null;
   data: Record<string, unknown>;
   fieldMeta: Record<string, FieldMeta>;
+  externalRefs: Record<string, string>;
   createdBy: string | null;
   createdByName: string | null;
   createdAt: string;
@@ -195,6 +229,19 @@ export interface SearchResponse {
   total: number;
   groups: SearchGroup[];
 }
+
+// ---------------------------------------------------------------- data source bindings
+
+/** Runs a template's bindings as edited, before they're saved. */
+export const tryBindingsSchema = z.object({
+  fields: z.array(fieldSchema).max(80),
+  bindings: bindingsSchema,
+  query: z.string().trim().min(1).max(200),
+  provider: bindingSlugSchema.optional(),
+  resultIndex: z.number().int().min(0).max(49).default(0),
+  choices: choicesSchema,
+});
+export type TryBindingsInput = z.input<typeof tryBindingsSchema>;
 
 // ---------------------------------------------------------------- errors
 

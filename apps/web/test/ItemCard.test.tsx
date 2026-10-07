@@ -22,6 +22,7 @@ const item: ItemDto = {
   cover: null,
   data: { author: 'Itziar Arrieta', publisher: 'Ediciones Faro', language: 'ES', year_bought: 2024 },
   fieldMeta: {},
+  externalRefs: {},
   createdBy: null,
   createdByName: null,
   createdAt: '2026-10-01T10:00:00Z',

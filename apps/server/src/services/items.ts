@@ -2,6 +2,7 @@ import {
   type FieldDefinition,
   type FieldMeta,
   type FigureValue,
+  type FillSource,
   formatAccession,
   type HeaderLayout,
   type ItemDto,
@@ -37,6 +38,7 @@ export function itemDto(row: ItemRow, prefix: string, cover: ImageRow | null, cr
     cover: cover ? { id: cover.id, width: cover.width, height: cover.height, color: cover.color } : null,
     data: row.data,
     fieldMeta: row.fieldMeta,
+    externalRefs: row.externalRefs,
     createdBy: row.createdBy,
     createdByName,
     createdAt: row.createdAt.toISOString(),
@@ -53,16 +55,31 @@ export function selectItems(db: Db) {
     .leftJoin(user, eq(user.id, items.createdBy));
 }
 
-/** Marks the fields a person changed by hand, so a later refresh from a data source leaves them alone. */
-export function touchMeta(
+/**
+ * Records where each written value came from. Values from a data source (`sources`)
+ * are marked with it and stay unlocked; everything else counts as typed by hand,
+ * and is locked when `lock` is set so a refresh leaves it alone.
+ */
+export function writeMeta(
   meta: Record<string, FieldMeta>,
-  changed: string[],
-  userId: string,
-  lock: boolean,
+  written: string[],
+  opts: { sources?: Record<string, FillSource>; userId: string; lock: boolean; unlock?: string[] },
 ): Record<string, FieldMeta> {
   const at = new Date().toISOString();
   const next = { ...meta };
-  for (const id of changed) next[id] = { source: 'user', by: userId, at, ...(lock && { locked: true }) };
+  for (const id of written) {
+    const src = opts.sources?.[id];
+    next[id] = src
+      ? { source: src.name, step: src.step, at, ...(src.url && { url: src.url }) }
+      : { source: 'user', by: opts.userId, at, ...(opts.lock && { locked: true }) };
+  }
+  for (const id of opts.unlock ?? []) {
+    const m = next[id];
+    if (m?.locked) {
+      const { locked: _, ...rest } = m;
+      next[id] = rest;
+    }
+  }
   return next;
 }
 

@@ -270,6 +270,8 @@ export interface SourceDto extends SourceData {
   secrets: { name: string }[];
   endpoints: EndpointDto[];
   lastCall: LastCall | null;
+  /** Templates whose data source settings use this source. */
+  usedBy: { templateId: string; name: string }[];
   createdAt: string;
   updatedAt: string;
   canEdit: boolean;

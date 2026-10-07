@@ -1,4 +1,12 @@
-import type { EndpointData, FieldMeta, LastCall, NameValue, SourceData, TemplateData } from '@precious/shared';
+import type {
+  Bindings,
+  EndpointData,
+  FieldMeta,
+  LastCall,
+  NameValue,
+  SourceData,
+  TemplateData,
+} from '@precious/shared';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -82,6 +90,7 @@ export const templates = pgTable('templates', {
   card: jsonb('card').$type<TemplateData['card']>().notNull(),
   itemLayout: jsonb('item_layout').$type<TemplateData['itemLayout']>().notNull(),
   header: jsonb('header').$type<TemplateData['header']>().notNull(),
+  bindings: jsonb('bindings').$type<Bindings>().notNull().default({ search: [], steps: [] }),
   /** Shelf sizing rules arrive with the shelf view. */
   shelf: jsonb('shelf'),
   createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
@@ -113,6 +122,7 @@ export const collections = pgTable(
     visibility: visibility('visibility').notNull().default('household'),
     publicSlug: text('public_slug').unique(),
     editAccess: editAccess('edit_access').notNull().default('owner'),
+    quickAdd: boolean('quick_add').notNull().default(false),
     ...timestamps,
   },
   (t) => [index('collections_owner_idx').on(t.ownerId), index('collections_template_idx').on(t.templateId)],

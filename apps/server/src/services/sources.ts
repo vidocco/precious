@@ -2,7 +2,7 @@ import type { EndpointData, EndpointDto, SourceDto } from '@precious/shared';
 import { asc, eq } from 'drizzle-orm';
 import type { SessionUser } from '../auth/auth.ts';
 import type { Db } from '../db/client.ts';
-import { dataSources, endpoints } from '../db/schema.ts';
+import { dataSources, endpoints, templates } from '../db/schema.ts';
 import { notFound } from '../errors.ts';
 
 export type SourceRow = typeof dataSources.$inferSelect;
@@ -33,7 +33,12 @@ export function endpointDto(e: EndpointRow): EndpointDto {
 }
 
 /** Secret names only: values never leave the server. */
-export function sourceDto(s: SourceRow, eps: EndpointRow[], viewer: SessionUser): SourceDto {
+export function sourceDto(
+  s: SourceRow,
+  eps: EndpointRow[],
+  viewer: SessionUser,
+  usedBy: SourceDto['usedBy'] = [],
+): SourceDto {
   return {
     id: s.id,
     name: s.name,
@@ -49,6 +54,7 @@ export function sourceDto(s: SourceRow, eps: EndpointRow[], viewer: SessionUser)
       .map((name) => ({ name })),
     endpoints: eps.map(endpointDto),
     lastCall: s.lastCall ?? null,
+    usedBy,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     canEdit: viewer.role === 'admin',
@@ -60,4 +66,26 @@ export async function loadSource(db: Db, id: string) {
   if (!s) throw notFound('Data source');
   const eps = await db.select().from(endpoints).where(eq(endpoints.sourceId, id)).orderBy(asc(endpoints.name));
   return { source: s, endpoints: eps };
+}
+
+/** Which templates use each source's endpoints, by source id. */
+export async function sourceUsage(db: Db): Promise<Map<string, SourceDto['usedBy']>> {
+  const [tpls, eps] = await Promise.all([
+    db.select({ id: templates.id, name: templates.name, bindings: templates.bindings }).from(templates),
+    db.select({ id: endpoints.id, sourceId: endpoints.sourceId }).from(endpoints),
+  ]);
+  const sourceOf = new Map(eps.map((e) => [e.id, e.sourceId]));
+  const out = new Map<string, SourceDto['usedBy']>();
+  for (const t of tpls) {
+    const ids = [
+      ...t.bindings.search.map((p) => p.endpointId),
+      ...t.bindings.steps.flatMap((s) => [s.endpointId, ...(s.match ? [s.match.endpointId] : [])]),
+    ];
+    for (const sid of new Set(ids.map((id) => sourceOf.get(id)).filter((x): x is string => !!x))) {
+      const list = out.get(sid) ?? [];
+      list.push({ templateId: t.id, name: t.name });
+      out.set(sid, list);
+    }
+  }
+  return out;
 }

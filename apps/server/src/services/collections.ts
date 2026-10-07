@@ -33,6 +33,7 @@ export function collectionDto(
     visibility: c.visibility,
     publicSlug: c.visibility === 'public' ? c.publicSlug : null,
     editAccess: c.editAccess,
+    quickAdd: c.quickAdd,
     itemCount: Number(row.itemCount),
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
@@ -72,6 +73,7 @@ export function templateData(t: TemplateRow): TemplateData {
     card: t.card,
     itemLayout: t.itemLayout,
     header: t.header,
+    bindings: t.bindings,
   };
 }
 

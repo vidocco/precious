@@ -24,7 +24,7 @@ import {
   type ItemRow,
   itemDto,
   selectItems,
-  touchMeta,
+  writeMeta,
 } from '../services/items.ts';
 import { findMatch, normalize } from '../services/text.ts';
 
@@ -116,6 +116,13 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
       if (!parsed.success) throw validationError(parsed.error);
       const data = parsed.data;
       await assertImage(db, req.body.coverImageId);
+      const refs = req.body.externalRefs ?? {};
+      const found = Object.keys(refs).length > 0;
+      // Title and cover only get a record when the item came from a data source.
+      const written = [
+        ...Object.keys(data),
+        ...(found ? ['$title', ...(req.body.coverImageId ? ['$cover'] : [])] : []),
+      ];
 
       const created = await db.transaction(async (tx) => {
         // Taking the next number locks the collection row, so numbers never repeat.
@@ -134,7 +141,9 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
             title: req.body.title,
             coverImageId: req.body.coverImageId ?? null,
             data,
-            fieldMeta: touchMeta({}, Object.keys(data), viewer.id, false),
+            externalRefs: refs,
+            // Values typed by hand on an item found in a data source are locked, so refreshing keeps them.
+            fieldMeta: writeMeta({}, written, { sources: req.body.sources, userId: viewer.id, lock: found }),
             searchText: buildSearchText({ title: req.body.title, accession, data }, template.fields),
             createdBy: viewer.id,
             updatedBy: viewer.id,
@@ -206,10 +215,15 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
       assertCanEditItems(viewer, row.collection);
       const fields = row.template.fields;
 
+      const meta = row.item.fieldMeta;
+      const sources = req.body.sources ?? {};
+      // A value from a data source never replaces one typed by hand.
+      const blocked = (key: string) => key in sources && meta[key]?.locked === true;
+
       let data = row.item.data;
       let changed: string[] = [];
       if (req.body.data) {
-        const incoming = req.body.data;
+        const incoming = Object.fromEntries(Object.entries(req.body.data).filter(([k]) => !blocked(k)));
         const parsed = buildItemSchema(fields, { partial: true }).safeParse(incoming);
         if (!parsed.success) throw validationError(parsed.error);
         // Keys sent empty are cleared; values of hidden fields are kept untouched.
@@ -226,16 +240,20 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
           (k) => JSON.stringify(row.item.data[k]) !== JSON.stringify(data[k]),
         );
       }
-      if (req.body.coverImageId !== undefined) await assertImage(db, req.body.coverImageId);
-      const title = req.body.title ?? row.item.title;
+      const coverImageId = blocked('$cover') ? undefined : req.body.coverImageId;
+      if (coverImageId !== undefined) await assertImage(db, coverImageId);
+      const title = (!blocked('$title') && req.body.title) || row.item.title;
+      if (title !== row.item.title) changed.push('$title');
+      if (coverImageId !== undefined && coverImageId !== row.item.coverImageId) changed.push('$cover');
       const accession = formatAccession(row.collection.accessionPrefix, row.item.accessionNo);
       await db
         .update(items)
         .set({
           title,
           data,
-          ...(req.body.coverImageId !== undefined && { coverImageId: req.body.coverImageId }),
-          fieldMeta: touchMeta(row.item.fieldMeta, changed, viewer.id, true),
+          ...(coverImageId !== undefined && { coverImageId }),
+          ...(req.body.externalRefs && { externalRefs: { ...row.item.externalRefs, ...req.body.externalRefs } }),
+          fieldMeta: writeMeta(meta, changed, { sources, userId: viewer.id, lock: true, unlock: req.body.unlock }),
           searchText: buildSearchText({ title, accession, data }, fields),
           updatedBy: viewer.id,
         })

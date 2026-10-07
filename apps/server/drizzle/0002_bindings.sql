@@ -1,0 +1,2 @@
+ALTER TABLE "collections" ADD COLUMN "quick_add" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "templates" ADD COLUMN "bindings" jsonb DEFAULT '{"search":[],"steps":[]}'::jsonb NOT NULL;

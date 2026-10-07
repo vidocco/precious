@@ -88,6 +88,7 @@ export function sampleItem(t: TemplateData, title = 'Example item', n = 1): Item
     cover: null,
     data: Object.fromEntries(t.fields.filter((f) => !f.hidden).map((f) => [f.id, sampleValue(f)])),
     fieldMeta: {},
+    externalRefs: {},
     createdBy: null,
     createdByName: null,
     createdAt: new Date().toISOString(),
@@ -104,4 +105,5 @@ export const EMPTY_TEMPLATE: TemplateData = {
   card: { slots: { tl: null, tr: '$accession', b: null }, lines: [{ fields: ['$title'], style: 'title' }] },
   itemLayout: { info: ['$added'], sections: [] },
   header: { figures: [{ id: 'count', kind: 'count', label: 'Items' }] },
+  bindings: { search: [], steps: [] },
 };
