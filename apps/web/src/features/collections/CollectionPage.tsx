@@ -1,4 +1,11 @@
-import type { CollectionDto, FieldDefinition, ItemDto, TemplateDto } from '@precious/shared';
+import {
+  type CollectionDto,
+  describeShelf,
+  type FieldDefinition,
+  type ItemDto,
+  type TemplateDto,
+  type View,
+} from '@precious/shared';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Button as AriaButton, Checkbox, CheckboxGroup, Dialog, DialogTrigger, Popover } from 'react-aria-components';
@@ -7,6 +14,7 @@ import { useCollection, useCollectionMutations, useFigures, useItems, useMe, use
 import { Figures } from '../../components/Figures.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { ItemCard, Wall } from '../../components/ItemCard.tsx';
+import { Shelf } from '../../components/Shelf.tsx';
 import { Snippet } from '../../components/Snippet.tsx';
 import {
   Button,
@@ -33,7 +41,7 @@ export interface CollectionSearch {
   q?: string;
   sort?: string;
   dir?: 'asc' | 'desc';
-  view?: 'wall' | 'table';
+  view?: View;
   filter?: string[];
   /** The add sheet is open, searching for this. */
   add?: string;
@@ -391,10 +399,10 @@ export function CollectionPage() {
         <Segmented
           label="View"
           value={view}
-          onChange={(v) => setSearch({ view: v as 'wall' | 'table' })}
+          onChange={(v) => setSearch({ view: v as View })}
           options={[
             { value: 'wall', label: 'Wall' },
-            { value: 'shelf', label: 'Shelf', disabled: true, title: 'The shelf view arrives in a later version' },
+            { value: 'shelf', label: 'Shelf' },
             { value: 'table', label: 'Table' },
           ]}
         />
@@ -444,10 +452,23 @@ export function CollectionPage() {
           dir={dir}
           onSort={(ref) => setSearch({ sort: ref, dir: sort === ref && dir === 'asc' ? 'desc' : 'asc' })}
         />
+      ) : view === 'shelf' ? (
+        <section className="grid gap-1" aria-label="Shelf">
+          <p className="text-[0.8rem] text-ink-muted">{describeShelf(t.shelf, fields)}</p>
+          <Shelf items={items.data.items} rules={t.shelf} fields={fields} />
+        </section>
       ) : (
         <Wall>
           {items.data.items.map((it) => (
-            <ItemCard key={it.id} item={it} card={t.card} fields={fields} match={it.match} collectionName={c.name} />
+            <ItemCard
+              key={it.id}
+              item={it}
+              card={t.card}
+              fields={fields}
+              match={it.match}
+              collectionName={c.name}
+              morph
+            />
           ))}
         </Wall>
       )}

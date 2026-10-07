@@ -85,6 +85,23 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
         { id: 'notes', type: 'text', title: 'Notes', fields: ['notes'] },
       ],
     },
+    shelf: {
+      by: 'rules',
+      rulesField: 'platform',
+      rules: [
+        { values: ['Switch', 'Switch 2'], thickness: 1.1, height: 17 },
+        {
+          values: ['PS5', 'PS4', 'Xbox Series', 'Xbox One', 'PS3', 'Xbox 360', 'Wii', 'Wii U'],
+          thickness: 1.4,
+          height: 17,
+        },
+        { values: ['3DS', 'DS'], thickness: 1.2, height: 13.7 },
+        { values: ['GameCube', 'PS2', 'PC'], thickness: 1.4, height: 19 },
+      ],
+      otherwise: { thickness: 1.4, height: 19 },
+      lean: { field: 'status', equals: 'Playing' },
+      subtitle: 'platform',
+    },
     header: {
       figures: [
         { id: 'count', kind: 'count', label: 'Items' },
@@ -139,6 +156,14 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
         { id: 'notes', type: 'text', title: 'Notes', fields: ['notes'] },
       ],
     },
+    shelf: {
+      by: 'measure',
+      // About 0.05 mm a page plus 3 mm of cover.
+      thickness: { field: 'pages', factor: 0.005, add: 0.3, fallback: 2.5 },
+      height: { field: 'height_cm', factor: 1, add: 0, fallback: 21 },
+      lean: { field: 'status', equals: 'Reading' },
+      subtitle: 'author',
+    },
     header: {
       figures: [
         { id: 'count', kind: 'count', label: 'Books' },
@@ -190,6 +215,12 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
         { id: 'notes', type: 'text', title: 'Notes', fields: ['notes'] },
       ],
     },
+    shelf: {
+      by: 'measure',
+      thickness: { field: null, factor: 1, add: 0, fallback: 0.4 },
+      height: { field: null, factor: 1, add: 0, fallback: 31.4 },
+      subtitle: 'artist',
+    },
     header: {
       figures: [
         { id: 'count', kind: 'count', label: 'Records' },
@@ -224,6 +255,11 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
     itemLayout: {
       info: ['designer', 'publisher', 'year', 'min_players', 'max_players', 'play_time', 'played', 'rating'],
       sections: [{ id: 'notes', type: 'text', title: 'Notes', fields: ['notes'], wide: true }],
+    },
+    shelf: {
+      by: 'measure',
+      thickness: { field: null, factor: 1, add: 0, fallback: 7 },
+      height: { field: null, factor: 1, add: 0, fallback: 30 },
     },
     header: {
       figures: [

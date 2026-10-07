@@ -4,7 +4,7 @@ import { mediaUrl } from '../api/client.ts';
 import { cx } from './ui.tsx';
 
 /** A placeholder "cover" for items without an image: a colour field with the title set in type. */
-function placeholderColor(title: string) {
+export function placeholderColor(title: string) {
   let h = 0;
   for (const ch of title) h = (h * 33 + ch.charCodeAt(0)) % 360;
   return `oklch(0.42 0.07 ${h})`;
@@ -18,6 +18,7 @@ export function Cover({
   className,
   children,
   eager,
+  transitionName,
 }: {
   cover: CoverDto | null;
   title: string;
@@ -26,6 +27,8 @@ export function Cover({
   className?: string;
   children?: ReactNode;
   eager?: boolean;
+  /** Pairs this cover with the same one on another page, so navigating morphs between them. */
+  transitionName?: string;
 }) {
   return (
     <div
@@ -34,7 +37,7 @@ export function Cover({
         square ? 'aspect-square' : 'aspect-[3/4]',
         className,
       )}
-      style={{ background: cover?.color ?? placeholderColor(title) }}
+      style={{ background: cover?.color ?? placeholderColor(title), viewTransitionName: transitionName }}
     >
       {cover ? (
         <img

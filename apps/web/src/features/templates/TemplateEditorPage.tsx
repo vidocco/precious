@@ -9,19 +9,31 @@ import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useEffect, useState } from 'react';
 import { ApiError, errorMessage } from '../../api/client.ts';
 import { useTemplate, useTemplateMutations } from '../../api/queries.ts';
-import { Button, ConfirmStrip, cx, EmptyState, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
+import { Button, ConfirmStrip, cx, ErrorBox, Spinner, TextField } from '../../components/ui.tsx';
 import { BindingsTab } from './BindingsTab.tsx';
 import { EMPTY_TEMPLATE } from './editorUtils.ts';
 import { FieldsTab } from './FieldsTab.tsx';
 import { CardTab, HeaderTab, ItemPageTab } from './LayoutTabs.tsx';
+import { ShelfTab } from './ShelfTab.tsx';
 
 const TABS = ['Fields', 'Card', 'Item page', 'Collection header', 'Shelf', 'Data sources'] as const;
 type Tab = (typeof TABS)[number];
 
 function toData(t: TemplateDto): TemplateData {
-  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header } = t;
+  const { name, description, icon, accessionPrefix, fields, card, itemLayout, header, shelf } = t;
   const bindings = { ...EMPTY_BINDINGS, ...t.bindings };
-  return structuredClone({ name, description, icon, accessionPrefix, fields, card, itemLayout, header, bindings });
+  return structuredClone({
+    name,
+    description,
+    icon,
+    accessionPrefix,
+    fields,
+    card,
+    itemLayout,
+    header,
+    bindings,
+    shelf,
+  });
 }
 
 function pruneFill(fill: Record<string, string>, ok: (r: string) => boolean) {
@@ -60,6 +72,14 @@ function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
         return { ...s, fill: pruneFill(s.fill, ok), ...(match && { match }) };
       }),
       computed: t.bindings.computed.filter((c) => ids.has(c.field)),
+    },
+    shelf: {
+      ...t.shelf,
+      thickness: { ...t.shelf.thickness, field: ok(t.shelf.thickness.field) ? t.shelf.thickness.field : null },
+      height: { ...t.shelf.height, field: ok(t.shelf.height.field) ? t.shelf.height.field : null },
+      rulesField: ok(t.shelf.rulesField) ? t.shelf.rulesField : null,
+      lean: t.shelf.lean && ids.has(t.shelf.lean.field) ? t.shelf.lean : null,
+      subtitle: ok(t.shelf.subtitle) ? t.shelf.subtitle : null,
     },
   };
 }
@@ -247,12 +267,7 @@ export function TemplateEditorPage({ mode }: { mode: 'create' | 'edit' }) {
           {tab === 'Card' && <CardTab t={t} set={set} />}
           {tab === 'Item page' && <ItemPageTab t={t} set={set} />}
           {tab === 'Collection header' && <HeaderTab t={t} set={set} />}
-          {tab === 'Shelf' && (
-            <EmptyState title="Coming with the shelf view">
-              Here you’ll set how thick and tall each item is on the shelf: a fixed size, read from a field, or by rules
-              on another field such as the platform.
-            </EmptyState>
-          )}
+          {tab === 'Shelf' && <ShelfTab t={t} set={set} />}
           {tab === 'Data sources' && (
             <BindingsTab
               t={t}

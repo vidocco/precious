@@ -57,6 +57,7 @@ export function ItemView({
   collectionName,
   users,
   onUnlock,
+  morph,
 }: {
   item: ItemDto;
   fields: FieldDefinition[];
@@ -65,6 +66,8 @@ export function ItemView({
   users?: UserDto[];
   /** When set, locked values can be unlocked from their source label. */
   onUnlock?: (ref: string) => void;
+  /** The cover morphs from the card or spine that was clicked. */
+  morph?: boolean;
 }) {
   const ctxValue = (ref: string) => {
     const field = fields.find((f) => f.id === ref);
@@ -88,6 +91,7 @@ export function ItemView({
           title={item.title}
           size="lg"
           eager
+          transitionName={morph ? `cover-${item.id}` : undefined}
           className="max-w-[250px] shadow-[0_2px_2px_rgb(0_0_0/0.4),0_22px_44px_-16px_rgb(0_0_0/0.85)]"
         />
         <div className="grid min-w-0 content-start gap-3.5">

@@ -61,7 +61,7 @@ export const EDIT_ACCESS = ['owner', 'household'] as const;
 export type EditAccess = (typeof EDIT_ACCESS)[number];
 export const ACCENTS = ['ultramarine', 'teal', 'moss', 'saffron', 'oxblood', 'plum'] as const;
 export type Accent = (typeof ACCENTS)[number];
-export const VIEWS = ['wall', 'table'] as const;
+export const VIEWS = ['wall', 'shelf', 'table'] as const;
 export type View = (typeof VIEWS)[number];
 
 export const collectionInputSchema = z.object({

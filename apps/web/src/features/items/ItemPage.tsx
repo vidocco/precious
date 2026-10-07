@@ -101,6 +101,7 @@ export function ItemPage() {
           layout={template.data.itemLayout}
           collectionName={c.name}
           users={users}
+          morph
           onUnlock={
             c.canEdit
               ? (ref) => update.mutate({ id: it.id, unlock: [ref] }, { onError: (err) => setError(errorMessage(err)) })

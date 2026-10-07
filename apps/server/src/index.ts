@@ -6,7 +6,7 @@ import { pruneCache } from './connectors/cache.ts';
 import { createRuntime } from './connectors/runner.ts';
 import { createDb } from './db/client.ts';
 import { runMigrations } from './db/migrate.ts';
-import { seedStarterTemplates } from './db/seed.ts';
+import { fillStarterShelves, seedStarterTemplates } from './db/seed.ts';
 import { Scheduler, syncAllComputed } from './services/computed.ts';
 import { pruneImages } from './services/remoteImages.ts';
 
@@ -14,6 +14,7 @@ const config = loadConfig();
 const database = createDb(config.DATABASE_URL);
 await runMigrations(database, config.MIGRATIONS_DIR);
 const seeded = await seedStarterTemplates(database.db);
+await fillStarterShelves(database.db);
 await mkdir(config.UPLOAD_DIR, { recursive: true });
 
 await pruneCache(database.db);

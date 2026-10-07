@@ -4,6 +4,7 @@ import type {
   FieldMeta,
   LastCall,
   NameValue,
+  Shelf,
   SourceData,
   TemplateData,
 } from '@precious/shared';
@@ -92,8 +93,8 @@ export const templates = pgTable('templates', {
   itemLayout: jsonb('item_layout').$type<TemplateData['itemLayout']>().notNull(),
   header: jsonb('header').$type<TemplateData['header']>().notNull(),
   bindings: jsonb('bindings').$type<Bindings>().notNull().default({ search: [], steps: [], computed: [] }),
-  /** Shelf sizing rules arrive with the shelf view. */
-  shelf: jsonb('shelf'),
+  /** How big items are on the shelf; null (older templates) means the default size. */
+  shelf: jsonb('shelf').$type<Shelf | null>(),
   createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
   version: integer('version').notNull().default(1),
   ...timestamps,

@@ -1,5 +1,5 @@
-import { STARTER_TEMPLATES, templateInputSchema } from '@precious/shared';
-import { count } from 'drizzle-orm';
+import { STARTER_TEMPLATES, shelfIssues, templateInputSchema } from '@precious/shared';
+import { count, eq, isNull } from 'drizzle-orm';
 import type { Db } from './client.ts';
 import { templates, user } from './schema.ts';
 
@@ -11,4 +11,22 @@ export async function seedStarterTemplates(db: Db): Promise<number> {
   const rows = STARTER_TEMPLATES.map((t) => templateInputSchema.parse(t));
   await db.insert(templates).values(rows);
   return rows.length;
+}
+
+/**
+ * Starter templates made before shelves existed get the starter's shelf rules, as long
+ * as the fields those rules use are still there. Templates with their own rules are left alone.
+ */
+export async function fillStarterShelves(db: Db): Promise<number> {
+  const rows = await db.select().from(templates).where(isNull(templates.shelf));
+  let filled = 0;
+  for (const t of rows) {
+    const starter = STARTER_TEMPLATES.find((s) => s.name === t.name);
+    if (!starter) continue;
+    const { shelf } = templateInputSchema.parse(starter);
+    if (shelfIssues(shelf, t.fields).length) continue;
+    await db.update(templates).set({ shelf }).where(eq(templates.id, t.id));
+    filled++;
+  }
+  return filled;
 }

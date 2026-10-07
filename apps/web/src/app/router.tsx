@@ -1,4 +1,5 @@
 import type { SetupStatus, UserDto } from '@precious/shared';
+import { VIEWS } from '@precious/shared';
 import type { QueryClient } from '@tanstack/react-query';
 import { createRootRouteWithContext, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -105,7 +106,7 @@ const collectionRoute = createRoute({
     q: z.string().optional(),
     sort: z.string().optional(),
     dir: z.enum(['asc', 'desc']).optional(),
-    view: z.enum(['wall', 'table']).optional(),
+    view: z.enum(VIEWS).optional(),
     filter: z.array(z.string()).optional(),
     add: z.string().optional(),
   }),
@@ -205,7 +206,14 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export function makeRouter(queryClient: QueryClient) {
-  return createRouter({ routeTree, context: { queryClient }, defaultPreload: 'intent', scrollRestoration: true });
+  return createRouter({
+    routeTree,
+    context: { queryClient },
+    defaultPreload: 'intent',
+    scrollRestoration: true,
+    // Covers morph between the wall or shelf and the item page where the browser can.
+    defaultViewTransition: true,
+  });
 }
 
 declare module '@tanstack/react-router' {

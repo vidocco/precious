@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { bindingsSchema, bindingTargetIssues, EMPTY_BINDINGS } from './bindings.ts';
+import { DEFAULT_SHELF, shelfIssues, shelfSchema } from './shelf.ts';
 
 /**
  * A template describes one kind of collection: its fields and how items are
@@ -150,6 +151,8 @@ export const templateInputSchema = z
     header: headerSchema.default({ figures: [] }),
     /** Which data sources search for items and fill in their fields. */
     bindings: bindingsSchema.default(EMPTY_BINDINGS),
+    /** How big items are on the shelf. */
+    shelf: shelfSchema.default(DEFAULT_SHELF),
   })
   .superRefine((t, ctx) => {
     const ids = new Set<string>();
@@ -191,6 +194,7 @@ export const templateInputSchema = z
       }
     });
     for (const issue of bindingTargetIssues(t.bindings, ids)) ctx.addIssue({ code: 'custom', ...issue });
+    for (const issue of shelfIssues(t.shelf, t.fields)) ctx.addIssue({ code: 'custom', ...issue });
   });
 
 export type TemplateInput = z.input<typeof templateInputSchema>;

@@ -255,6 +255,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             onChange={(v) => set({ defaultView: v })}
             options={[
               { value: 'wall', label: 'Wall' },
+              { value: 'shelf', label: 'Shelf' },
               { value: 'table', label: 'Table' },
             ]}
           />

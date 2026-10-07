@@ -20,6 +20,7 @@ export function ItemCard({
   match,
   to,
   collectionName,
+  morph,
 }: {
   item: ItemDto;
   card: CardLayout;
@@ -27,6 +28,8 @@ export function ItemCard({
   match?: ItemMatch;
   to?: { to: string; params?: Record<string, string> } | null;
   collectionName?: string;
+  /** The cover morphs into the item page's cover when opened. */
+  morph?: boolean;
 }) {
   const slot = (pos: 'tl' | 'tr' | 'b') => {
     const ref = card.slots[pos];
@@ -39,6 +42,7 @@ export function ItemCard({
         cover={item.cover}
         title={item.title}
         className="transition-transform duration-200 group-hover:-translate-y-1"
+        transitionName={morph ? `cover-${item.id}` : undefined}
       >
         {slot('tl')}
         {slot('tr')}

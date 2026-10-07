@@ -79,3 +79,30 @@
     }
   }
 }
+
+/* Shelf spines lift, straighten and part smoothly (see components/Shelf.tsx). */
+.spine {
+  transition: transform 280ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .spine {
+    transition: none;
+  }
+}
+
+/* Page changes: a quick cross-fade, and covers morph from card or spine to the item page. */
+::view-transition-group(*) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}

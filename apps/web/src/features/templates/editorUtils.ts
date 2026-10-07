@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SHELF,
   type FieldDefinition,
   type FieldRef,
   type FieldType,
@@ -106,4 +107,5 @@ export const EMPTY_TEMPLATE: TemplateData = {
   itemLayout: { info: ['$added'], sections: [] },
   header: { figures: [{ id: 'count', kind: 'count', label: 'Items' }] },
   bindings: { search: [], steps: [], computed: [] },
+  shelf: DEFAULT_SHELF,
 };
