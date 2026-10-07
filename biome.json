@@ -6,13 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/drizzle",
-      "!design/mockups",
-      "!**/test/fixtures"
-    ]
+    "includes": ["**", "!**/dist", "!**/drizzle", "!design/mockups", "!**/test/fixtures"]
   },
   "formatter": {
     "enabled": true,
@@ -38,12 +32,7 @@
         "noLabelWithoutControl": {
           "level": "error",
           "options": {
-            "inputComponents": [
-              "TextInput",
-              "TextArea",
-              "Select",
-              "RefSelect"
-            ]
+            "inputComponents": ["TextInput", "TextArea", "Select", "RefSelect"]
           }
         }
       }
@@ -59,9 +48,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/design/tokens.css"
-      ],
+      "includes": ["**/design/tokens.css"],
       "linter": {
         "rules": {
           "style": {
