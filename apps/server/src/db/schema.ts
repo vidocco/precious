@@ -1,4 +1,4 @@
-import type { FieldMeta, TemplateData } from '@precious/shared';
+import type { EndpointData, FieldMeta, LastCall, NameValue, SourceData, TemplateData } from '@precious/shared';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -160,3 +160,62 @@ export const items = pgTable(
     index('items_search_trgm_idx').using('gin', sql`${t.searchText} gin_trgm_ops`),
   ],
 );
+
+// ---------------------------------------------------------------- data sources
+
+export interface EncryptedSecret {
+  iv: string;
+  tag: string;
+  ct: string;
+}
+
+export const dataSources = pgTable('data_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  baseUrl: text('base_url').notNull(),
+  auth: jsonb('auth').$type<SourceData['auth']>().notNull(),
+  headers: jsonb('headers').$type<NameValue[]>().notNull().default([]),
+  secrets: jsonb('secrets').$type<Record<string, EncryptedSecret>>().notNull().default({}),
+  rateLimit: jsonb('rate_limit').$type<SourceData['rateLimit']>().notNull(),
+  cacheSeconds: integer('cache_seconds').notNull().default(86400),
+  userAgent: text('user_agent'),
+  lastCall: jsonb('last_call').$type<LastCall>(),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  ...timestamps,
+});
+
+export const endpoints = pgTable(
+  'endpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => dataSources.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    name: text('name').notNull(),
+    role: text('role').$type<EndpointData['role']>().notNull(),
+    kind: text('kind').$type<EndpointData['kind']>().notNull(),
+    method: text('method').$type<EndpointData['method']>().notNull().default('GET'),
+    path: text('path').notNull().default(''),
+    query: jsonb('query').$type<NameValue[]>().notNull().default([]),
+    headers: jsonb('headers').$type<NameValue[]>().notNull().default([]),
+    body: jsonb('body').$type<EndpointData['body']>().notNull(),
+    graphql: jsonb('graphql').$type<EndpointData['graphql']>().notNull(),
+    format: text('format').$type<EndpointData['format']>().notNull().default('auto'),
+    extract: jsonb('extract').$type<EndpointData['extract']>().notNull().default({}),
+    map: jsonb('map').$type<Record<string, string>>().notNull().default({}),
+    cacheSeconds: integer('cache_seconds'),
+    sample: jsonb('sample').$type<EndpointData['sample']>().notNull().default({}),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('endpoints_source_key_idx').on(t.sourceId, t.key)],
+);
+
+export const httpCache = pgTable('http_cache', {
+  key: text('key').primaryKey(),
+  status: integer('status').notNull(),
+  contentType: text('content_type').notNull().default(''),
+  body: text('body').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
