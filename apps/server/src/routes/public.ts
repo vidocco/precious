@@ -25,7 +25,9 @@ export const publicRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) 
   }
 
   function publicTemplate(t: typeof templates.$inferSelect) {
-    const data = templateInputSchema.parse(templateData(t));
+    // Defaults filled in; a template saved by a newer version (beyond this one's limits) is shown as stored.
+    const stored = templateData(t);
+    const data = templateInputSchema.safeParse(stored).data ?? stored;
     return { ...data, fields: data.fields.filter((f) => !f.hidden && f.type !== 'person') };
   }
 

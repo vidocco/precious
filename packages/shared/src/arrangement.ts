@@ -27,7 +27,12 @@ export const arrangeLevelSchema = z
   });
 export type ArrangeLevel = z.output<typeof arrangeLevelSchema>;
 
-export const arrangementSchema = z.array(arrangeLevelSchema).max(5, 'Use at most 5 levels');
+/** Enough for Genre → Author → Saga → Saga # → Collection → Collection # → Title → Subtitle, and a little more. */
+export const ARRANGE_MAX_LEVELS = 10;
+
+export const arrangementSchema = z
+  .array(arrangeLevelSchema)
+  .max(ARRANGE_MAX_LEVELS, `Use at most ${ARRANGE_MAX_LEVELS} levels`);
 export type Arrangement = ArrangeLevel[];
 
 /** Long text and people don't make sensible groups or orders. */

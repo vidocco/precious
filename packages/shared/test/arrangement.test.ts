@@ -58,6 +58,12 @@ describe('arrangement schema', () => {
     expect(shelfSchema.parse({}).arrange).toEqual([]);
   });
 
+  it('takes up to 10 levels', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ref: `field_${i}` }));
+    expect(arrangementSchema.safeParse(many(10)).success).toBe(true);
+    expect(arrangementSchema.safeParse(many(11)).error?.issues[0]?.message).toBe('Use at most 10 levels');
+  });
+
   it('only starts a new board for a marked level', () => {
     expect(arrangementSchema.safeParse([{ ref: 'genre', newBoard: true }]).success).toBe(false);
     expect(arrangementSchema.safeParse([{ ref: 'genre', marker: true, newBoard: true }]).success).toBe(true);

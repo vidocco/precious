@@ -1,4 +1,5 @@
 import {
+  ARRANGE_MAX_LEVELS,
   ARRANGE_SYSTEM_REFS,
   type ArrangeLevel,
   type Arrangement,
@@ -10,8 +11,6 @@ import {
 } from '@precious/shared';
 import { Button, IconButton, Select } from '../../components/ui.tsx';
 import { move } from './editorUtils.ts';
-
-const MAX_LEVELS = 5;
 
 function dirLabels(ref: string, fields: FieldDefinition[]): [string, string] {
   if (ref === '$added') return ['Oldest first', 'Newest first'];
@@ -129,7 +128,7 @@ export function ArrangementEditor({
           </div>
         );
       })}
-      {value.length < MAX_LEVELS && unused && (
+      {value.length < ARRANGE_MAX_LEVELS && unused && (
         <Button
           icon="plus"
           variant="ghost"
