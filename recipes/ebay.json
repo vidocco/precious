@@ -1,0 +1,124 @@
+{
+  "format": "precious-recipe",
+  "version": 1,
+  "source": {
+    "name": "eBay",
+    "description": "Values from the asking prices of live eBay listings (median of up to 50). Needs a free eBay developer keyset (production): clientId is its App ID, clientSecret its Cert ID. The X-EBAY-C-MARKETPLACE-ID header sets the country and currency (EBAY_ES, EBAY_DE, EBAY_GB, EBAY_US…). The barcode lookup reads an ISBN, EAN or barcode field.",
+    "baseUrl": "https://api.ebay.com/buy/browse/v1",
+    "auth": {
+      "type": "oauth2",
+      "tokenUrl": "https://api.ebay.com/identity/v1/oauth2/token",
+      "clientId": "{{ secrets.clientId }}",
+      "secret": "clientSecret",
+      "scope": "https://api.ebay.com/oauth/api_scope",
+      "clientAuth": "header"
+    },
+    "headers": [
+      {
+        "name": "X-EBAY-C-MARKETPLACE-ID",
+        "value": "EBAY_ES"
+      }
+    ],
+    "rateLimit": {
+      "requests": 2,
+      "perSeconds": 1
+    },
+    "cacheSeconds": 86400
+  },
+  "secretNames": ["clientId", "clientSecret"],
+  "endpoints": [
+    {
+      "key": "used_price",
+      "name": "Used price, by name",
+      "role": "compute",
+      "kind": "rest",
+      "method": "GET",
+      "path": "/item_summary/search",
+      "query": [
+        {
+          "name": "q",
+          "value": "{{ item.title }}{% if item.platform %} {{ item.platform }}{% endif %}"
+        },
+        {
+          "name": "filter",
+          "value": "buyingOptions:{FIXED_PRICE},conditions:{USED}"
+        },
+        {
+          "name": "limit",
+          "value": "50"
+        }
+      ],
+      "map": {
+        "value": "( $p := $sort(itemSummaries.$number(price.value)); $count($p) > 0 ? $round($count($p) % 2 = 1 ? $p[$floor($count($p) / 2)] : ($p[$count($p) / 2 - 1] + $p[$count($p) / 2]) / 2, 2) )"
+      },
+      "sample": {
+        "item": {
+          "title": "Hollow Knight",
+          "platform": "Switch"
+        }
+      }
+    },
+    {
+      "key": "new_price",
+      "name": "New price, by name",
+      "role": "compute",
+      "kind": "rest",
+      "method": "GET",
+      "path": "/item_summary/search",
+      "query": [
+        {
+          "name": "q",
+          "value": "{{ item.title }}{% if item.platform %} {{ item.platform }}{% endif %}"
+        },
+        {
+          "name": "filter",
+          "value": "buyingOptions:{FIXED_PRICE},conditions:{NEW}"
+        },
+        {
+          "name": "limit",
+          "value": "50"
+        }
+      ],
+      "map": {
+        "value": "( $p := $sort(itemSummaries.$number(price.value)); $count($p) > 0 ? $round($count($p) % 2 = 1 ? $p[$floor($count($p) / 2)] : ($p[$count($p) / 2 - 1] + $p[$count($p) / 2]) / 2, 2) )"
+      },
+      "sample": {
+        "item": {
+          "title": "Hollow Knight",
+          "platform": "Switch"
+        }
+      }
+    },
+    {
+      "key": "used_price_barcode",
+      "name": "Used price, by barcode or ISBN",
+      "role": "compute",
+      "kind": "rest",
+      "method": "GET",
+      "path": "/item_summary/search",
+      "query": [
+        {
+          "name": "gtin",
+          "value": "{{ item.isbn | default: item.ean | default: item.barcode }}"
+        },
+        {
+          "name": "filter",
+          "value": "buyingOptions:{FIXED_PRICE},conditions:{USED}"
+        },
+        {
+          "name": "limit",
+          "value": "50"
+        }
+      ],
+      "map": {
+        "value": "( $p := $sort(itemSummaries.$number(price.value)); $count($p) > 0 ? $round($count($p) % 2 = 1 ? $p[$floor($count($p) / 2)] : ($p[$count($p) / 2 - 1] + $p[$count($p) / 2]) / 2, 2) )"
+      },
+      "sample": {
+        "item": {
+          "title": "The Hobbit",
+          "isbn": "9780261102217"
+        }
+      }
+    }
+  ]
+}

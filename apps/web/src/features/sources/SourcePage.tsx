@@ -154,6 +154,21 @@ function AuthFields({
             onChange={(e) => onChange({ ...auth, scope: e.target.value || undefined })}
             disabled={disabled}
           />
+          <Field
+            label="Send the client ID and secret"
+            htmlFor="client-auth"
+            help="Most token addresses take them in the request; some, like eBay's, want a Basic header."
+          >
+            <Select
+              id="client-auth"
+              value={auth.clientAuth ?? 'body'}
+              onChange={(e) => onChange({ ...auth, clientAuth: e.target.value === 'header' ? 'header' : undefined })}
+              disabled={disabled}
+            >
+              <option value="body">In the request (most APIs)</option>
+              <option value="header">As a Basic header (eBay)</option>
+            </Select>
+          </Field>
         </div>
       );
     default:

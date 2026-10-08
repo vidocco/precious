@@ -1,0 +1,89 @@
+{
+ "id": 4570366,
+ "title": "Random Access Memories",
+ "year": 2013,
+ "country": "UK, Europe & US",
+ "artists": [
+  {
+   "name": "Daft Punk",
+   "id": 1289
+  },
+  {
+   "name": "Nile Rodgers (2)",
+   "id": 1
+  }
+ ],
+ "labels": [
+  {
+   "name": "Columbia",
+   "catno": "88883716861"
+  },
+  {
+   "name": "Columbia",
+   "catno": "88883 71686 1"
+  },
+  {
+   "name": "Sony Music",
+   "catno": "88883 71686 1"
+  }
+ ],
+ "formats": [
+  {
+   "name": "Vinyl",
+   "qty": "2",
+   "descriptions": [
+    "LP",
+    "Album",
+    "Stereo"
+   ],
+   "text": "180 Gram"
+  }
+ ],
+ "genres": [
+  "Electronic",
+  "Funk / Soul",
+  "Pop"
+ ],
+ "styles": [
+  "Disco",
+  "Funk",
+  "Synth-pop",
+  "Electro",
+  "French House"
+ ],
+ "estimated_weight": 460,
+ "lowest_price": 19.99,
+ "num_for_sale": 136,
+ "tracklist": [
+  {
+   "position": "A1",
+   "type_": "track",
+   "title": "Give Life Back To Music"
+  },
+  {
+   "position": "A2",
+   "type_": "track",
+   "title": "The Game Of Love"
+  },
+  {
+   "position": "A3",
+   "type_": "track",
+   "title": "Giorgio By Moroder"
+  },
+  {
+   "position": "",
+   "type_": "heading",
+   "title": "Side D"
+  }
+ ],
+ "images": [
+  {
+   "type": "secondary",
+   "uri": "https://i.discogs.com/example/back.jpeg"
+  },
+  {
+   "type": "primary",
+   "uri": "https://i.discogs.com/example/front.jpeg"
+  }
+ ]
+}

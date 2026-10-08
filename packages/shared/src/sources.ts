@@ -42,6 +42,11 @@ export const authSchema = z.discriminatedUnion('type', [
     clientId: z.string().max(400),
     secret: secretNameSchema,
     scope: z.string().max(400).optional(),
+    /**
+     * How the client ID and secret reach the token address: in the form body (the default, and what
+     * sources saved before this option had), or as a Basic Authorization header (eBay, among others).
+     */
+    clientAuth: z.enum(['body', 'header']).optional(),
   }),
 ]);
 export type SourceAuth = z.infer<typeof authSchema>;

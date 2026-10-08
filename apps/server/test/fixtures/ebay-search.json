@@ -1,0 +1,76 @@
+{
+ "href": "https://api.ebay.com/buy/browse/v1/item_summary/search?q=hollow+knight+switch&limit=50",
+ "total": 4,
+ "limit": 50,
+ "offset": 0,
+ "itemSummaries": [
+  {
+   "itemId": "v1|110000001|0",
+   "title": "Hollow Knight Nintendo Switch PAL",
+   "price": {
+    "value": "19.99",
+    "currency": "EUR"
+   },
+   "condition": "Usado",
+   "conditionId": "3000",
+   "image": {
+    "imageUrl": "https://i.ebayimg.test/1.jpg"
+   },
+   "itemWebUrl": "https://www.ebay.es/itm/110000001",
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ]
+  },
+  {
+   "itemId": "v1|110000002|0",
+   "title": "Hollow Knight Switch completo",
+   "price": {
+    "value": "24.01",
+    "currency": "EUR"
+   },
+   "condition": "Usado",
+   "conditionId": "3000",
+   "image": {
+    "imageUrl": "https://i.ebayimg.test/2.jpg"
+   },
+   "itemWebUrl": "https://www.ebay.es/itm/110000002",
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ]
+  },
+  {
+   "itemId": "v1|110000003|0",
+   "title": "Lote Switch: Hollow Knight + Celeste + Ori",
+   "price": {
+    "value": "60.00",
+    "currency": "EUR"
+   },
+   "condition": "Usado",
+   "conditionId": "3000",
+   "image": {
+    "imageUrl": "https://i.ebayimg.test/3.jpg"
+   },
+   "itemWebUrl": "https://www.ebay.es/itm/110000003",
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ]
+  },
+  {
+   "itemId": "v1|110000004|0",
+   "title": "Hollow Knight (Switch) sin caja",
+   "price": {
+    "value": "15.00",
+    "currency": "EUR"
+   },
+   "condition": "Usado",
+   "conditionId": "3000",
+   "image": {
+    "imageUrl": "https://i.ebayimg.test/4.jpg"
+   },
+   "itemWebUrl": "https://www.ebay.es/itm/110000004",
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ]
+  }
+ ]
+}

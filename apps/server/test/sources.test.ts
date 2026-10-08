@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import { join } from 'node:path';
 import type { EndpointDto, PresetDto, RunResult, SourceDto } from '@precious/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type Client, setupHousehold, startTestServer, TEST_DATABASE_URL, type TestServer } from './harness.ts';
-import { json, startMockServer } from './mock-server.ts';
+import { json, type Recorded, startMockServer } from './mock-server.ts';
 
 const fixture = (name: string) => readFileSync(join(import.meta.dirname, 'fixtures', name), 'utf8');
 
@@ -12,6 +13,15 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
   let admin: Client;
   let member: Client;
   let mock: Awaited<ReturnType<typeof startMockServer>>;
+  const tokenRequests: { basic: boolean; scope: string | null }[] = [];
+  const ebayRequests: { url: string; marketplace: unknown }[] = [];
+  const discogsRequests: string[] = [];
+  const discogs = (file: string) => (req: Recorded, res: ServerResponse) => {
+    if (req.headers.authorization !== 'Discogs token=my-discogs-token') return json(res, { message: 'auth' }, 401);
+    discogsRequests.push(req.url);
+    res.setHeader('content-type', 'application/json');
+    res.end(fixture(file));
+  };
 
   beforeAll(async () => {
     server = await startTestServer();
@@ -19,10 +29,22 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
     mock = await startMockServer({
       'POST /oauth2/token': (req, res) => {
         const form = new URLSearchParams(req.body);
-        if (form.get('client_id') !== 'my-client' || form.get('client_secret') !== 'my-secret')
-          return json(res, {}, 403);
+        const basic = req.headers.authorization === `Basic ${Buffer.from('my-client:my-secret').toString('base64')}`;
+        const inBody = form.get('client_id') === 'my-client' && form.get('client_secret') === 'my-secret';
+        if (!basic && !inBody) return json(res, {}, 403);
+        tokenRequests.push({ basic, scope: form.get('scope') });
         json(res, { access_token: 'tok', expires_in: 3600 });
       },
+      '/item_summary/search': (req, res) => {
+        if (req.headers.authorization !== 'Bearer tok') return json(res, {}, 401);
+        ebayRequests.push({ url: req.url, marketplace: req.headers['x-ebay-c-marketplace-id'] });
+        res.setHeader('content-type', 'application/json');
+        res.end(fixture('ebay-search.json'));
+      },
+      '/database/search': discogs('discogs-search.json'),
+      '/releases/4570366': discogs('discogs-release.json'),
+      '/marketplace/stats/4570366': discogs('discogs-stats.json'),
+      '/marketplace/price_suggestions/4570366': discogs('discogs-price-suggestions.json'),
       'POST /games': (req, res) => {
         if (req.headers.authorization !== 'Bearer tok' || req.headers['client-id'] !== 'my-client')
           return json(res, {}, 401);
@@ -97,7 +119,7 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
 
   it('lists the bundled presets', async () => {
     const res = await member.get<PresetDto[]>('/api/recipes/presets');
-    expect(res.body.map((p) => p.key)).toEqual(['anilist', 'igdb', 'open-library', 'wikipedia']);
+    expect(res.body.map((p) => p.key)).toEqual(['anilist', 'discogs', 'ebay', 'igdb', 'open-library', 'wikipedia']);
     expect(res.body.find((p) => p.key === 'igdb')?.secretNames).toEqual(['clientId', 'clientSecret']);
   });
 
@@ -162,6 +184,75 @@ describe.runIf(TEST_DATABASE_URL)('data sources API', () => {
       episodes: 26,
       studio: 'Artland',
     });
+  });
+
+  it('runs the eBay preset: Basic-header sign-in, median asking price by name or barcode', async () => {
+    const { source, missingSecrets } = await install('ebay');
+    expect(missingSecrets).toEqual(['clientId', 'clientSecret']);
+    expect(source.auth).toMatchObject({
+      type: 'oauth2',
+      clientAuth: 'header',
+      scope: 'https://api.ebay.com/oauth/api_scope',
+    });
+    await admin.put(`/api/sources/${source.id}/secrets`, { clientId: 'my-client', clientSecret: 'my-secret' });
+
+    const byName = await run(source, 'used_price', { item: { title: 'Hollow Knight', platform: 'Switch' } });
+    expect(byName.errors).toEqual([]);
+    // Listings at 15, 19.99, 24.01 and 60: the median ignores the bundle at 60.
+    expect(byName.output).toBe(22);
+    expect(tokenRequests.at(-1)).toEqual({ basic: true, scope: 'https://api.ebay.com/oauth/api_scope' });
+    const asked = new URL(ebayRequests.at(-1)?.url ?? '', mock.url);
+    expect(asked.searchParams.get('q')).toBe('Hollow Knight Switch');
+    expect(asked.searchParams.get('filter')).toBe('buyingOptions:{FIXED_PRICE},conditions:{USED}');
+    expect(ebayRequests.at(-1)?.marketplace).toBe('EBAY_ES');
+    expect(JSON.stringify(byName.request)).not.toMatch(/my-secret|my-client/);
+
+    // Items without a platform search by title alone; the barcode lookup reads the ISBN.
+    await run(source, 'new_price', { item: { title: 'Wingspan' } });
+    expect(new URL(ebayRequests.at(-1)?.url ?? '', mock.url).searchParams.get('q')).toBe('Wingspan');
+    const byIsbn = await run(source, 'used_price_barcode', { item: { title: 'The Hobbit', isbn: '9780261102217' } });
+    expect(byIsbn.output).toBe(22);
+    expect(new URL(ebayRequests.at(-1)?.url ?? '', mock.url).searchParams.get('gtin')).toBe('9780261102217');
+  });
+
+  it('runs the Discogs preset: search, release details and prices', async () => {
+    const { source, missingSecrets } = await install('discogs');
+    expect(missingSecrets).toEqual(['token']);
+    await admin.put(`/api/sources/${source.id}/secrets`, { token: 'my-discogs-token' });
+
+    const search = await run(source, 'search', { query: 'random access memories' });
+    expect(search.errors).toEqual([]);
+    expect((search.output as unknown[])[0]).toEqual({
+      id: '4570366',
+      title: 'Random Access Memories',
+      subtitle: 'Vinyl · UK, Europe & US · 88883716861',
+      year: 2013,
+      image: 'https://i.discogs.com/example/R-4570366-cover.jpeg',
+      artist: 'Daft Punk',
+    });
+    expect(JSON.stringify(search.request)).not.toContain('my-discogs-token');
+
+    const release = await run(source, 'release', { refs: { discogs: '4570366' } });
+    expect(release.errors).toEqual([]);
+    expect(release.output).toEqual({
+      artist: 'Daft Punk, Nile Rodgers',
+      label: 'Columbia',
+      catalogue_no: '88883716861',
+      year: 2013,
+      country: 'UK, Europe & US',
+      format: '2×LP',
+      genre: ['Electronic', 'Funk / Soul', 'Pop'],
+      style: ['Disco', 'Funk', 'Synth-pop', 'Electro', 'French House'],
+      weight_g: 460,
+      tracklist: 'A1  Give Life Back To Music\nA2  The Game Of Love\nA3  Giorgio By Moroder',
+      image: 'https://i.discogs.com/example/front.jpeg',
+    });
+
+    const lowest = await run(source, 'lowest_price', { refs: { discogs: '4570366' } });
+    expect(lowest.output).toBe(17.79);
+    expect(discogsRequests.at(-1)).toBe('/marketplace/stats/4570366?curr_abbr=EUR');
+    const suggested = await run(source, 'suggested_price', { refs: { discogs: '4570366' } });
+    expect(suggested.output).toBe(28.44);
   });
 
   it('runs the IGDB preset with OAuth and stored secrets that are never shown', async () => {

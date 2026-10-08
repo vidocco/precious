@@ -1,0 +1,181 @@
+{
+ "pagination": {
+  "page": 1,
+  "pages": 1,
+  "per_page": 25,
+  "items": 2
+ },
+ "results": [
+  {
+   "country": "UK, Europe & US",
+   "year": "2013",
+   "format": [
+    "Vinyl",
+    "LP",
+    "Album",
+    "Stereo"
+   ],
+   "label": [
+    "Columbia",
+    "Columbia",
+    "Sony Music",
+    "Sony Music Entertainment",
+    "Daft Life Ltd.",
+    "Daft Life Ltd.",
+    "Columbia Records",
+    "Sony Music Entertainment",
+    "Sony Music Entertainment Poland Sp. z o.o.",
+    "Daft Punk",
+    "Imagem Music",
+    "Daft Music",
+    "Because Music",
+    "XLC Music",
+    "Miss Mittie Music",
+    "Giorgio Moroder Publishing Co.",
+    "EMI Music Publishing",
+    "Julian Casablancas Publishing",
+    "Warner/Chappell Music Publishing Ltd.",
+    "EMI April Music Inc.",
+    "More Water From Nazareth",
+    "Sunset Squid Music",
+    "Kazz Song, Inc.",
+    "Todd Imperatrice",
+    "Chrysalis",
+    "Stéphane Quême",
+    "Perfect Pitch Music Publishing",
+    "Liberation Music PTY Ltd.",
+    "Rhino Entertainment Company",
+    "Warner Music Group",
+    "Studio Gang",
+    "Henson Recording Studios",
+    "Conway Studios",
+    "Electric Lady Studios",
+    "Capitol Studios",
+    "Conway Studios",
+    "Gateway Mastering",
+    "Translab",
+    "Optimal Media GmbH"
+   ],
+   "type": "release",
+   "genre": [
+    "Electronic",
+    "Funk / Soul",
+    "Pop"
+   ],
+   "style": [
+    "Disco",
+    "Funk",
+    "Synth-pop",
+    "Electro",
+    "French House"
+   ],
+   "id": 4570366,
+   "barcode": [
+    "8 88837 16861 8",
+    "888837168618",
+    "LC00162",
+    "BIEM/GEMA",
+    "BMI",
+    "ASCAP",
+    "AL88883716861-2 BD11929-01 A2 Chab.☆",
+    "BL88883716861-2 BD11929-01 B2 Chab☆",
+    "CL88883716861-2 BD11929-02 C2 Chab.☆",
+    "DL88883716861-2 Chab.☆ BD11929-02 D2 IF LOVE IS THE ANSWER YOU'RE HOME"
+   ],
+   "master_id": 556257,
+   "uri": "/release/4570366-Daft-Punk-Random-Access-Memories",
+   "catno": "88883716861",
+   "title": "Daft Punk - Random Access Memories",
+   "thumb": "",
+   "cover_image": "https://i.discogs.com/example/R-4570366-cover.jpeg",
+   "resource_url": "https://api.discogs.com/releases/4570366",
+   "format_quantity": 2,
+   "formats": [
+    {
+     "name": "Vinyl",
+     "qty": "2",
+     "text": "180 Gram",
+     "descriptions": [
+      "LP",
+      "Album",
+      "Stereo"
+     ]
+    }
+   ]
+  },
+  {
+   "country": "US",
+   "year": "2013",
+   "format": [
+    "Vinyl",
+    "LP",
+    "Album",
+    "Stereo"
+   ],
+   "label": [
+    "Columbia",
+    "Columbia",
+    "Sony Music Entertainment",
+    "Daft Life Ltd.",
+    "Daft Life Ltd.",
+    "Conway Studios",
+    "Studio Gang",
+    "Henson Recording Studios",
+    "Conway Studios",
+    "Electric Lady Studios",
+    "Capitol Studios",
+    "Translab",
+    "Gateway Mastering",
+    "Schallplattenfabrik Pallas GmbH",
+    "Schallplattenfabrik Pallas GmbH",
+    "Pallas USA"
+   ],
+   "type": "release",
+   "genre": [
+    "Electronic",
+    "Funk / Soul",
+    "Pop"
+   ],
+   "style": [
+    "Disco",
+    "Funk",
+    "Electro",
+    "Synth-pop"
+   ],
+   "id": 9216088,
+   "barcode": [
+    "8 8883-71686-1 8",
+    "888837168618",
+    "C 371686",
+    "AL 88883716861",
+    "BL 88883716861",
+    "CL 88883716861",
+    "DL 88883716861",
+    "AL 88883716861-2 -30371- BD11929 - 01 - A2 P.USA Chab.☆",
+    "BL 88883716861-2  -30371- BD11929 - 01 - B2 P.USA Chab.☆",
+    "CL 88883716861-2 -30372- BD11929 - 02 - C2  P.USA Chab.☆",
+    "DL 88883716861-2 -30372- BD11929 - 02 - D2 P.USA Chab.☆ IF LOVE IS THE ANSWER YOU'RE HOME"
+   ],
+   "master_id": 556257,
+   "uri": "/release/9216088-Daft-Punk-Random-Access-Memories",
+   "catno": "88883716861",
+   "title": "Daft Punk - Random Access Memories",
+   "thumb": "",
+   "cover_image": "",
+   "resource_url": "https://api.discogs.com/releases/9216088",
+   "format_quantity": 2,
+   "formats": [
+    {
+     "name": "Vinyl",
+     "qty": "2",
+     "text": "180g",
+     "descriptions": [
+      "LP",
+      "Album",
+      "Stereo"
+     ]
+    }
+   ]
+  }
+ ]
+}

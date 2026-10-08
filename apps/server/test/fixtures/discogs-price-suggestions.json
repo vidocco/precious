@@ -1,0 +1,34 @@
+{
+ "Mint (M)": {
+  "currency": "EUR",
+  "value": 41.3
+ },
+ "Near Mint (NM or M-)": {
+  "currency": "EUR",
+  "value": 36.94
+ },
+ "Very Good Plus (VG+)": {
+  "currency": "EUR",
+  "value": 28.4371
+ },
+ "Very Good (VG)": {
+  "currency": "EUR",
+  "value": 19.61
+ },
+ "Good Plus (G+)": {
+  "currency": "EUR",
+  "value": 10.86
+ },
+ "Good (G)": {
+  "currency": "EUR",
+  "value": 6.48
+ },
+ "Fair (F)": {
+  "currency": "EUR",
+  "value": 4.29
+ },
+ "Poor (P)": {
+  "currency": "EUR",
+  "value": 2.1
+ }
+}

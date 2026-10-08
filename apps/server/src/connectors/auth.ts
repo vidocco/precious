@@ -35,17 +35,24 @@ export class TokenCache {
     const cached = this.tokens.get(key);
     if (cached && cached.expiresAt > Date.now()) return cached.token;
 
-    const form = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
-    });
+    const form = new URLSearchParams({ grant_type: 'client_credentials' });
+    const headers: Record<string, string> = {
+      'content-type': 'application/x-www-form-urlencoded',
+      accept: 'application/json',
+    };
+    if (auth.clientAuth === 'header') {
+      // As eBay's own client and most others send it: "id:secret", base64-encoded, not form-encoded first.
+      headers.authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+    } else {
+      form.set('client_id', clientId);
+      form.set('client_secret', clientSecret);
+    }
     if (auth.scope) form.set('scope', auth.scope);
     let res: Response;
     try {
       res = await this.fetchImpl(auth.tokenUrl, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+        headers,
         body: form,
         signal: AbortSignal.timeout(15_000),
       });

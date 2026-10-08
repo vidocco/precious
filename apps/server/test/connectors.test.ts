@@ -256,6 +256,19 @@ describe('runner', () => {
         if (form.get('client_secret') !== 'twitch-secret') return json(res, { message: 'invalid client' }, 403);
         json(res, { access_token: `token-${tokenCalls}`, expires_in: 5000000 });
       },
+      // Like eBay's token address: the client ID and secret only as a Basic header.
+      'POST /oauth2/basic-token': (req, res) => {
+        const form = new URLSearchParams(req.body);
+        const basic = `Basic ${Buffer.from('my-app:my-cert').toString('base64')}`;
+        if (req.headers.authorization !== basic || form.has('client_secret') || form.has('client_id'))
+          return json(res, { error: 'invalid_client' }, 401);
+        if (form.get('scope') !== 'https://api.test/scope') return json(res, { error: 'invalid_scope' }, 400);
+        json(res, { access_token: 'basic-token', expires_in: 7200 });
+      },
+      'GET /listings': (req, res) => {
+        if (req.headers.authorization !== 'Bearer basic-token') return json(res, { message: 'unauthorised' }, 401);
+        json(res, { itemSummaries: [{ price: { value: '12.00' } }, { price: { value: '30.00' } }] });
+      },
       'POST /v4/games': (req, res) => {
         if (rejectNextGames) {
           rejectNextGames = false;
@@ -345,6 +358,35 @@ describe('runner', () => {
     const retried = await run(s, e, { query: 'Retry' });
     expect(retried.ok).toBe(true);
     expect(tokenCalls).toBe(before + 1);
+  });
+
+  it('can send OAuth2 client credentials as a Basic header instead', async () => {
+    const auth = {
+      type: 'oauth2' as const,
+      tokenUrl: `${server.url}/oauth2/basic-token`,
+      clientId: '{{ secrets.clientId }}',
+      secret: 'clientSecret',
+      scope: 'https://api.test/scope',
+    };
+    const secrets = {
+      clientId: encryptSecret(APP_SECRET, 'my-app'),
+      clientSecret: encryptSecret(APP_SECRET, 'my-cert'),
+    };
+    const e = endpoint({
+      path: '/listings',
+      role: 'compute',
+      map: { value: '$sum(itemSummaries.$number(price.value))' },
+    });
+
+    const res = await run(source({ auth: { ...auth, clientAuth: 'header' }, secrets }), e);
+    expect(res.errors).toEqual([]);
+    expect(res.output).toBe(42);
+    expect(JSON.stringify(res.request)).not.toContain('my-cert');
+
+    // Sources saved without the option keep sending them in the request, which this address refuses.
+    const old = await run(source({ auth, secrets }), e);
+    expect(old.ok).toBe(false);
+    expect(old.errors[0]?.stage).toBe('auth');
   });
 
   it('says which secret is missing', async () => {
