@@ -1,4 +1,5 @@
 import {
+  DEFAULT_COVER,
   DEFAULT_SHELF,
   type FieldDefinition,
   type FieldRef,
@@ -103,7 +104,11 @@ export const EMPTY_TEMPLATE: TemplateData = {
   icon: 'grid',
   accessionPrefix: 'IT',
   fields: [],
-  card: { slots: { tl: null, tr: '$accession', b: null }, lines: [{ fields: ['$title'], style: 'title' }] },
+  card: {
+    cover: DEFAULT_COVER,
+    slots: { tl: null, tr: '$accession', b: null },
+    lines: [{ fields: ['$title'], style: 'title' }],
+  },
   itemLayout: { info: ['$added'], sections: [] },
   header: { figures: [{ id: 'count', kind: 'count', label: 'Items' }] },
   bindings: { search: [], steps: [], computed: [] },

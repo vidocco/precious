@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { collectionInputSchema, collectionUpdateSchema } from '@precious/shared';
+import { arrangementIssues, collectionInputSchema, collectionUpdateSchema } from '@precious/shared';
 import { asc, eq } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -79,6 +79,14 @@ export const collectionRoutes: FastifyPluginAsyncZod<AppContext> = async (app, c
         if (viewer.role !== 'admin') throw badRequest('Only admins can change who owns a collection.');
         const [target] = await db.select({ id: user.id }).from(user).where(eq(user.id, ownerId));
         if (!target) throw notFound('Person');
+      }
+      if (changes.arrangement) {
+        const issues = arrangementIssues(changes.arrangement, row.template.fields, ['arrangement']);
+        if (issues.length)
+          throw badRequest(
+            'That shelf order uses fields this collection doesn’t have.',
+            issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
+          );
       }
       const goingPublic = changes.visibility === 'public' && !row.collection.publicSlug;
       await db

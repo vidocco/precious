@@ -40,6 +40,7 @@ export function collectionDto(
     publicSlug: c.visibility === 'public' ? c.publicSlug : null,
     editAccess: c.editAccess,
     quickAdd: c.quickAdd,
+    arrangement: c.arrangement ?? null,
     itemCount: Number(row.itemCount),
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),

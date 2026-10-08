@@ -1,13 +1,17 @@
 import {
   type CollectionDto,
+  describeArrangement,
   describeShelf,
+  effectiveArrangement,
   type FieldDefinition,
   type ItemDto,
+  type SectionBreak,
+  sectionBreaks,
   type TemplateDto,
   type View,
 } from '@precious/shared';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Button as AriaButton, Checkbox, CheckboxGroup, Dialog, DialogTrigger, Popover } from 'react-aria-components';
 import { errorMessage } from '../../api/client.ts';
 import { useCollection, useCollectionMutations, useFigures, useItems, useMe, useTemplate } from '../../api/queries.ts';
@@ -28,7 +32,7 @@ import {
   Select,
   Spinner,
 } from '../../components/ui.tsx';
-import { refLabel, refValue } from '../../lib/format.ts';
+import { LOCALE, refLabel, refValue } from '../../lib/format.ts';
 import { useDebounced, useStoredState } from '../../lib/hooks.ts';
 import { AddSheet } from '../items/AddSheet.tsx';
 import { CollectionHistory } from './CollectionHistory.tsx';
@@ -48,7 +52,7 @@ export interface CollectionSearch {
 }
 
 const fabClass =
-  'fixed right-[max(20px,env(safe-area-inset-right,0px))] bottom-[max(20px,env(safe-area-inset-bottom,0px))] z-20 grid size-[58px] place-items-center rounded-full bg-accent text-accent-ink shadow-float transition hover:scale-105';
+  'fixed right-[max(20px,var(--safe-right))] bottom-[max(20px,var(--safe-bottom))] z-20 grid size-[58px] place-items-center rounded-full bg-accent text-accent-ink shadow-float transition hover:scale-105';
 
 /** The round "+": opens the search sheet when the template has data sources, the form otherwise. */
 export function Fab({ collectionId, onAdd }: { collectionId: string; onAdd?: () => void }) {
@@ -160,6 +164,7 @@ function ItemTable({
   sort,
   dir,
   onSort,
+  breaks,
 }: {
   items: ItemDto[];
   fields: FieldDefinition[];
@@ -167,6 +172,8 @@ function ItemTable({
   sort: string;
   dir: 'asc' | 'desc';
   onSort: (ref: string) => void;
+  /** Section markers before each item, in shelf order. */
+  breaks?: SectionBreak[][];
 }) {
   const navigate = useNavigate();
   const cols = ['$accession', '$title', ...columns];
@@ -190,24 +197,45 @@ function ItemTable({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            <tr
-              key={item.id}
-              onClick={() => navigate({ to: '/i/$itemId', params: { itemId: item.id } })}
-              className="cursor-pointer hover:bg-surface-sunk"
-            >
-              {cols.map((ref) => (
-                <td key={ref} className="max-w-[28ch] truncate border-b border-line px-3.5 py-2 tabular">
-                  {ref === '$title' ? (
-                    <Link to="/i/$itemId" params={{ itemId: item.id }} className="font-semibold text-ink no-underline">
-                      {item.title}
-                    </Link>
-                  ) : (
-                    refValue(ref, item, fields)
-                  )}
-                </td>
+          {items.map((item, i) => (
+            <Fragment key={item.id}>
+              {breaks?.[i]?.map((b) => (
+                <tr key={`${item.id}-${b.depth}`}>
+                  <th
+                    colSpan={cols.length}
+                    scope="colgroup"
+                    className={cx(
+                      'border-b border-line bg-surface-sunk px-3.5 text-left',
+                      b.depth === 0
+                        ? 'pt-3 pb-1.5 text-[0.92rem] font-bold'
+                        : 'py-1 pl-6 text-[0.8rem] font-semibold text-ink-muted',
+                    )}
+                  >
+                    {b.label}
+                  </th>
+                </tr>
               ))}
-            </tr>
+              <tr
+                onClick={() => navigate({ to: '/i/$itemId', params: { itemId: item.id } })}
+                className="cursor-pointer hover:bg-surface-sunk"
+              >
+                {cols.map((ref) => (
+                  <td key={ref} className="max-w-[28ch] truncate border-b border-line px-3.5 py-2 tabular">
+                    {ref === '$title' ? (
+                      <Link
+                        to="/i/$itemId"
+                        params={{ itemId: item.id }}
+                        className="font-semibold text-ink no-underline"
+                      >
+                        {item.title}
+                      </Link>
+                    ) : (
+                      refValue(ref, item, fields)
+                    )}
+                  </td>
+                ))}
+              </tr>
+            </Fragment>
           ))}
         </tbody>
       </table>
@@ -263,6 +291,19 @@ function ColumnPicker({
   );
 }
 
+/** Where a group starts on the wall, in shelf order. */
+function SectionHeading({ section }: { section: SectionBreak }) {
+  return section.depth === 0 ? (
+    <h2 className="col-span-full mt-3 border-b border-line pb-1.5 text-[1.35rem] leading-none font-bold [font-stretch:75%] first:mt-0">
+      {section.label}
+    </h2>
+  ) : (
+    <h3 className="col-span-full -mb-2 text-[0.78rem] font-semibold tracking-[0.08em] text-ink-muted uppercase">
+      {section.label}
+    </h3>
+  );
+}
+
 export function CollectionPage() {
   const { collectionId } = useParams({ from: '/app/c/$collectionId' });
   const search = useSearch({ from: '/app/c/$collectionId' }) as CollectionSearch;
@@ -272,7 +313,9 @@ export function CollectionPage() {
   const figures = useFigures(collectionId);
 
   const view = search.view ?? collection.data?.defaultView ?? 'wall';
-  const sort = search.sort ?? '$added';
+  const arrangement = collection.data && template.data ? effectiveArrangement(collection.data, template.data) : null;
+  // The shelf opens in shelf order when there is one; other views start with the newest.
+  const sort = search.sort ?? (view === 'shelf' && arrangement?.length ? '$arranged' : '$added');
   const dir = search.dir ?? (sort === '$added' ? 'desc' : 'asc');
   const filters = search.filter ?? [];
   const [q, setQ] = useState(search.q ?? '');
@@ -289,7 +332,12 @@ export function CollectionPage() {
     [navigate],
   );
 
-  const items = useItems(collectionId, { q: search.q, sort, dir, filter: filters, limit });
+  // Wait for the template on the shelf, which may open in its shelf order.
+  const items = useItems(
+    collectionId,
+    { q: search.q, sort, dir, filter: filters, limit },
+    !(view === 'shelf' && !search.sort && arrangement === null),
+  );
   const fields = template.data?.fields ?? [];
   const [columns, setColumns] = useStoredState<string[]>(
     `precious.columns.${collectionId}`,
@@ -317,6 +365,9 @@ export function CollectionPage() {
     navigate({ search: (s: CollectionSearch) => ({ ...s, ...patch }), replace: true });
   const opts = filterOptions(fields);
   const total = items.data?.total ?? 0;
+  const arranged = sort === '$arranged' && !search.q && !!arrangement?.length;
+  const breaks =
+    arranged && items.data ? sectionBreaks(arrangement ?? [], items.data.items, fields, { locale: LOCALE }) : undefined;
 
   return (
     <div data-accent={c.accent} className="relative grid gap-5 px-4 pt-6 pb-28 sm:px-8 sm:pt-8">
@@ -374,6 +425,7 @@ export function CollectionPage() {
           className="w-auto py-1.5"
           onChange={(e) => setSearch({ sort: e.target.value, dir: e.target.value === '$added' ? 'desc' : 'asc' })}
         >
+          {!!arrangement?.length && <option value="$arranged">Shelf order</option>}
           <option value="$added">Newest first</option>
           <option value="$title">Title</option>
           <option value="$accession">Accession number</option>
@@ -385,7 +437,7 @@ export function CollectionPage() {
               </option>
             ))}
         </Select>
-        {sort !== '$added' && !search.q && (
+        {sort !== '$added' && sort !== '$arranged' && !search.q && (
           <Button
             icon={dir === 'asc' ? 'up' : 'down'}
             onClick={() => setSearch({ dir: dir === 'asc' ? 'desc' : 'asc' })}
@@ -451,24 +503,25 @@ export function CollectionPage() {
           sort={sort}
           dir={dir}
           onSort={(ref) => setSearch({ sort: ref, dir: sort === ref && dir === 'asc' ? 'desc' : 'asc' })}
+          breaks={breaks}
         />
       ) : view === 'shelf' ? (
         <section className="grid gap-1" aria-label="Shelf">
-          <p className="text-[0.8rem] text-ink-muted">{describeShelf(t.shelf, fields)}</p>
-          <Shelf items={items.data.items} rules={t.shelf} fields={fields} />
+          <p className="text-[0.8rem] text-ink-muted">
+            {describeShelf(t.shelf, fields)}
+            {arranged && ` · Arranged by ${describeArrangement(arrangement ?? [], fields)}`}
+          </p>
+          <Shelf items={items.data.items} rules={t.shelf} fields={fields} breaks={breaks} />
         </section>
       ) : (
         <Wall>
-          {items.data.items.map((it) => (
-            <ItemCard
-              key={it.id}
-              item={it}
-              card={t.card}
-              fields={fields}
-              match={it.match}
-              collectionName={c.name}
-              morph
-            />
+          {items.data.items.map((it, i) => (
+            <Fragment key={it.id}>
+              {breaks?.[i]?.map((b) => (
+                <SectionHeading key={b.depth} section={b} />
+              ))}
+              <ItemCard item={it} card={t.card} fields={fields} match={it.match} collectionName={c.name} morph />
+            </Fragment>
           ))}
         </Wall>
       )}

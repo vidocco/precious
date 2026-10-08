@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { type CardLayout, type FieldDefinition, fieldSchema, type ItemDto } from '@precious/shared';
+import { type CardLayout, DEFAULT_COVER, type FieldDefinition, fieldSchema, type ItemDto } from '@precious/shared';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ItemCard } from '../src/components/ItemCard.tsx';
@@ -32,6 +32,7 @@ const item: ItemDto = {
 describe('ItemCard', () => {
   it('puts the template’s fields on and under the cover', () => {
     const card: CardLayout = {
+      cover: DEFAULT_COVER,
       slots: { tl: 'language', tr: 'publisher', b: 'author' },
       lines: [
         { fields: ['$title'], style: 'title' },
@@ -48,6 +49,7 @@ describe('ItemCard', () => {
 
   it('skips empty slots and lines', () => {
     const card: CardLayout = {
+      cover: DEFAULT_COVER,
       slots: { tl: null, tr: '$accession', b: null },
       lines: [
         { fields: ['$title'], style: 'title' },
@@ -63,6 +65,7 @@ describe('ItemCard', () => {
 
   it('shows why a search matched, with the hit highlighted', () => {
     const card: CardLayout = {
+      cover: DEFAULT_COVER,
       slots: { tl: null, tr: null, b: null },
       lines: [{ fields: ['$title'], style: 'title' }],
     };

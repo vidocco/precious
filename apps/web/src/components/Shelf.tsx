@@ -1,4 +1,11 @@
-import { type FieldDefinition, formatValue, type ItemDto, type Shelf as ShelfRules, spineSize } from '@precious/shared';
+import {
+  type FieldDefinition,
+  formatValue,
+  type ItemDto,
+  type SectionBreak,
+  type Shelf as ShelfRules,
+  spineSize,
+} from '@precious/shared';
 import { Link } from '@tanstack/react-router';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { LOCALE } from '../lib/format.ts';
@@ -22,6 +29,8 @@ function inkFor(color: string): string {
 }
 
 interface Spine {
+  kind: 'spine';
+  key: string;
   item: ItemDto;
   w: number;
   h: number;
@@ -34,6 +43,19 @@ interface Spine {
   size: string;
 }
 
+/** A section marker standing between spines, like a library shelf divider. */
+interface Divider {
+  kind: 'divider';
+  key: string;
+  label: string;
+  depth: number;
+  w: number;
+}
+
+type Entry = Spine | Divider;
+
+const DIVIDER_W = [16, 12];
+
 const cmFmt = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 
 /**
@@ -41,8 +63,22 @@ const cmFmt = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, minimumF
  * (8 px a centimetre), with thickness doubled so titles fit. Spines fill the width, then
  * carry on on the next shelf. Hovering or focusing one lifts it, straightens it if it
  * leans, and slides its neighbours apart.
+ *
+ * With section breaks (a shelf order with marked levels), a labelled divider stands before
+ * the first item of each group, and groups of levels that ask for it start on a new board.
  */
-export function Shelf({ items, rules, fields }: { items: ItemDto[]; rules: ShelfRules; fields: FieldDefinition[] }) {
+export function Shelf({
+  items,
+  rules,
+  fields,
+  breaks,
+}: {
+  items: ItemDto[];
+  rules: ShelfRules;
+  fields: FieldDefinition[];
+  /** For each item, the section markers before it. */
+  breaks?: SectionBreak[][];
+}) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState<string | null>(null);
@@ -66,6 +102,8 @@ export function Shelf({ items, rules, fields }: { items: ItemDto[]; rules: Shelf
         const w = Math.max(16, Math.round(s.thickness * px * 2));
         const color = item.cover?.color ?? placeholderColor(item.title);
         return {
+          kind: 'spine',
+          key: item.id,
           item,
           w,
           h,
@@ -80,41 +118,88 @@ export function Shelf({ items, rules, fields }: { items: ItemDto[]; rules: Shelf
     [items, rules, px, subtitleField],
   );
 
-  // Fill each shelf to the width, then start the next one.
+  // Fill each shelf to the width, then start the next one. An item and the dividers before it
+  // stay together, so a divider never ends a shelf on its own.
   const rows = useMemo(() => {
-    const out: Spine[][] = [];
+    const out: Entry[][] = [];
     const usable = Math.max(120, width - SIDE * 2);
-    let row: Spine[] = [];
+    let row: Entry[] = [];
     let used = 0;
-    for (const s of spines) {
-      const need = s.w + s.room + (row.length ? GAP : 0);
-      if (row.length && used + need > usable) {
+    spines.forEach((s, i) => {
+      const marks = breaks?.[i] ?? [];
+      const unit: Entry[] = [
+        ...marks.map(
+          (b): Divider => ({
+            kind: 'divider',
+            key: `${s.key}-${b.depth}`,
+            label: b.label,
+            depth: b.depth,
+            w: DIVIDER_W[Math.min(b.depth, DIVIDER_W.length - 1)] ?? 12,
+          }),
+        ),
+        s,
+      ];
+      const unitWidth =
+        unit.reduce((sum, e) => sum + e.w + (e.kind === 'spine' ? e.room : 0), 0) + GAP * (unit.length - 1);
+      if (row.length && (marks.some((b) => b.newBoard) || used + GAP + unitWidth > usable)) {
         out.push(row);
         row = [];
         used = 0;
       }
-      row.push(s);
-      used += s.w + s.room + (row.length > 1 ? GAP : 0);
-    }
+      used += (row.length ? GAP : 0) + unitWidth;
+      row.push(...unit);
+    });
     if (row.length) out.push(row);
     return out;
-  }, [spines, width]);
+  }, [spines, breaks, width]);
 
   return (
     <div ref={box} className="grid gap-6" onPointerLeave={() => setActive(null)}>
       {width > 0 &&
         rows.map((row) => {
-          const at = row.findIndex((s) => s.item.id === active);
+          const at = row.findIndex((e) => e.kind === 'spine' && e.item.id === active);
+          const tallest = Math.max(0, ...row.map((e) => (e.kind === 'spine' ? e.h : 0)));
           return (
             <div
-              key={row[0]?.item.id}
+              key={row[0]?.key}
               // Room above for the lift.
               className="relative flex items-end gap-[2px] px-3 pt-6 pb-2.5"
             >
-              {row.map((s, i) => {
+              {row.map((e, i) => {
                 const d = at < 0 ? 0 : i - at;
                 const shift =
                   at < 0 || d === 0 || Math.abs(d) > SHIFT.length ? 0 : Math.sign(d) * (SHIFT[Math.abs(d) - 1] ?? 0);
+                if (e.kind === 'divider') {
+                  return (
+                    // biome-ignore lint/a11y/useSemanticElements: a divider plate that shows its label, which an <hr> can't hold
+                    <div
+                      key={e.key}
+                      role="separator"
+                      aria-label={e.label}
+                      title={e.label}
+                      className={cx(
+                        'spine flex flex-none items-start justify-center overflow-hidden rounded-t-[4px] border border-b-0 pt-2 shadow-object',
+                        e.depth === 0 ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface text-ink',
+                      )}
+                      style={{
+                        width: e.w,
+                        // Dividers stand a little above the books, the outermost ones most.
+                        height: tallest + (e.depth === 0 ? 14 : 6),
+                        transform: `translateX(${shift}px)`,
+                      }}
+                    >
+                      <span
+                        className={cx(
+                          'overflow-hidden leading-none font-bold tracking-[0.08em] text-ellipsis whitespace-nowrap uppercase [writing-mode:vertical-rl] rotate-180',
+                          e.depth === 0 ? 'text-[0.62rem]' : 'text-[0.56rem]',
+                        )}
+                      >
+                        {e.label}
+                      </span>
+                    </div>
+                  );
+                }
+                const s = e;
                 const up = at >= 0 && d === 0;
                 return (
                   <Link

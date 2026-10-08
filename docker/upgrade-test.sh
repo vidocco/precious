@@ -78,14 +78,20 @@ diff -u "$BEFORE" "$AFTER" || fail "data changed when $NEW started"
 curl -fsS -o /dev/null "$BASE/media/$COVER/sm" -b "$JAR" || fail "cover not served by $NEW"
 api GET /api/server/backups | grep -q 'precious-.*\.dump' || fail "backups not listed by $NEW"
 api POST "/api/collections/$COLLECTION/items" '{"title":"Ficciones","data":{"author":"Jorge Luis Borges"}}' >/dev/null
-# Save a template as the new version would, then roll back.
-api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json 'JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>t)(d.find(t=>t.name==="Books")))')" >/dev/null
+# Save the template as the new version would (with a shelf order, if it has them), and give the
+# collection its own order, then roll back.
+api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json 'JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>({...t,shelf:{...t.shelf,arrange:[{ref:"author",marker:true},{ref:"$title"}]}}))(d.find(t=>t.name==="Books")))')" >/dev/null
+api PATCH "/api/collections/$COLLECTION" '{"arrangement":[{"ref":"$title","marker":false}]}' >/dev/null || echo "   ($NEW has no collection shelf orders)"
 stop
 
 echo "-- $OLD again: rolling back onto data the new version wrote"
 start "$OLD"
+api GET "/api/collections/$COLLECTION" | grep -q '"Books"' || fail "$OLD can't read the collection after the rollback"
 api GET "/api/collections/$COLLECTION/items" | grep -q 'Ficciones' || fail "$OLD lost items after the rollback"
 api GET /api/templates | grep -q '"Books"' || fail "$OLD can't read templates after the rollback"
+api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json 'JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>t)(d.find(t=>t.name==="Books")))')" >/dev/null \
+  || fail "$OLD can't save the template after the rollback"
+api PATCH "/api/collections/$COLLECTION" '{"name":"Books again"}' >/dev/null || fail "$OLD can't change the collection after the rollback"
 stop
 
 echo "OK: $NEW upgrades from $OLD, and $OLD still runs on its data"

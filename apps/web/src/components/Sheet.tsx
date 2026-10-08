@@ -48,7 +48,7 @@ export function Sheet({
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
           {footer && (
-            <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:px-5">
+            <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3 pb-[calc(var(--safe-bottom)+12px)] sm:px-5">
               {footer}
             </div>
           )}

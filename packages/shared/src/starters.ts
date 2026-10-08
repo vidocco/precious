@@ -102,6 +102,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       otherwise: { thickness: 1.4, height: 19 },
       lean: { field: 'status', equals: 'Playing' },
       subtitle: 'platform',
+      arrange: [{ ref: 'platform', marker: true, newBoard: true }, { ref: '$title' }],
     },
     header: {
       figures: [
@@ -165,6 +166,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       height: { field: 'height_cm', factor: 1, add: 0, fallback: 21 },
       lean: { field: 'status', equals: 'Reading' },
       subtitle: 'author',
+      arrange: [{ ref: 'author' }, { ref: '$title' }],
     },
     header: {
       figures: [
@@ -223,6 +225,7 @@ export const STARTER_TEMPLATES: TemplateInput[] = [
       thickness: { field: null, factor: 1, add: 0, fallback: 0.4 },
       height: { field: null, factor: 1, add: 0, fallback: 31.4 },
       subtitle: 'artist',
+      arrange: [{ ref: 'artist' }, { ref: 'year' }],
     },
     header: {
       figures: [

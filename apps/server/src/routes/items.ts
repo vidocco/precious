@@ -1,5 +1,6 @@
 import {
   buildItemSchema,
+  effectiveArrangement,
   formatAccession,
   type ItemListResponse,
   itemInputSchema,
@@ -19,9 +20,11 @@ import { badRequest, notFound } from '../errors.ts';
 import { assertCanEditItems, loadCollection } from '../services/collections.ts';
 import { applyFormulas, syncComputed } from '../services/computed.ts';
 import {
+  arrangedOrder,
   buildSearchText,
   fieldExpr,
   filterConditions,
+  hasIcu,
   type ItemRow,
   itemDto,
   selectItems,
@@ -75,15 +78,18 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
 
       const direction = dir === 'asc' ? asc : desc;
       const sortField = fields.find((f) => f.id === sort);
+      const arrangement = sort === '$arranged' ? effectiveArrangement(collection, template) : [];
       const orderBy = q
         ? [desc(searchRank(q)), asc(items.title)]
-        : sort === '$title'
-          ? [direction(sql`lower(${items.title})`)]
-          : sort === '$accession'
-            ? [direction(items.accessionNo)]
-            : sortField
-              ? [sql`${fieldExpr(sortField)} ${sql.raw(dir === 'asc' ? 'asc' : 'desc')} nulls last`, asc(items.title)]
-              : [direction(items.createdAt)];
+        : arrangement.length
+          ? arrangedOrder(arrangement, fields, await hasIcu(db))
+          : sort === '$title'
+            ? [direction(sql`lower(${items.title})`)]
+            : sort === '$accession'
+              ? [direction(items.accessionNo)]
+              : sortField
+                ? [sql`${fieldExpr(sortField)} ${sql.raw(dir === 'asc' ? 'asc' : 'desc')} nulls last`, asc(items.title)]
+                : [direction(items.createdAt)];
 
       const [rows, totals] = await Promise.all([
         selectItems(db)

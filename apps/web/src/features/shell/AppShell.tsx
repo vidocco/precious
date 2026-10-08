@@ -129,7 +129,7 @@ function MobileMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (v: b
   ];
   return (
     <ModalOverlay isOpen={open} onOpenChange={onOpenChange} isDismissable className="fixed inset-0 z-50 bg-scrim">
-      <Modal className="absolute inset-x-0 top-0 rounded-b-sheet border-b border-line bg-surface pt-[env(safe-area-inset-top,0px)] shadow-float">
+      <Modal className="absolute inset-x-0 top-0 rounded-b-sheet border-b border-line bg-surface pt-[var(--safe-top)] shadow-float">
         <Dialog aria-label="Menu" className="grid gap-0.5 p-3 outline-none">
           <div className="mb-1 flex items-center justify-between px-1">
             <span className="flex items-center gap-2 text-[1.2rem] font-bold [font-stretch:75%]">
@@ -174,7 +174,7 @@ function MobileMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (v: b
 function MobileSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
     <ModalOverlay isOpen={open} onOpenChange={onOpenChange} isDismissable className="fixed inset-0 z-50 bg-scrim">
-      <Modal className="absolute inset-x-0 top-0 bg-surface p-3 pt-[calc(env(safe-area-inset-top,0px)+12px)] shadow-float">
+      <Modal className="absolute inset-x-0 top-0 bg-surface p-3 pt-[calc(var(--safe-top)+12px)] shadow-float">
         <Dialog aria-label="Search" className="flex items-center gap-2 outline-none">
           <GlobalSearch autoFocus onDone={() => onOpenChange(false)} />
           <IconButton icon="x" label="Close search" onClick={() => onOpenChange(false)} />
@@ -196,7 +196,9 @@ export function TopBar() {
   }, [path]);
 
   return (
-    <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line bg-surface">
+    // The header reaches under the status bar (translucent when installed on iOS) and pads itself
+    // below it, so it always takes up its whole height and never covers the page.
+    <header className="sticky top-0 z-30 border-b border-line bg-surface pt-[var(--safe-top)] pr-[var(--safe-right)] pl-[var(--safe-left)]">
       <div className="mx-auto flex max-w-[1400px] items-center gap-3.5 px-4 py-2.5">
         <Link
           to="/"
@@ -255,7 +257,7 @@ export function AppShell() {
   return (
     <div className="min-h-dvh">
       <TopBar />
-      <main className="mx-auto max-w-[1400px]">
+      <main className="mx-auto max-w-[1400px] pr-[var(--safe-right)] pl-[var(--safe-left)]">
         <Outlet />
       </main>
     </div>

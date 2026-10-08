@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { arrangementIssues, arrangementSchema } from './arrangement.ts';
 import type { FieldDefinition } from './template.ts';
 
 /**
@@ -40,6 +41,8 @@ export const shelfSchema = z.object({
     .default(null),
   /** A field shown in small type under the title on the spine (author, platform). */
   subtitle: z.string().nullable().default(null),
+  /** How items are grouped and ordered ("Shelf order"); empty for none. Collections can override it. */
+  arrange: arrangementSchema.default([]),
 });
 export type Shelf = z.output<typeof shelfSchema>;
 export type ShelfInput = z.input<typeof shelfSchema>;
@@ -68,6 +71,7 @@ export function shelfIssues(s: Shelf, fields: FieldDefinition[]): { path: (strin
     issues.push({ path: ['shelf', 'lean', 'field'], message: `Unknown field "${s.lean.field}"` });
   if (s.subtitle && !s.subtitle.startsWith('$') && !byId.has(s.subtitle))
     issues.push({ path: ['shelf', 'subtitle'], message: `Unknown field "${s.subtitle}"` });
+  issues.push(...arrangementIssues(s.arrange ?? [], fields, ['shelf', 'arrange']));
   return issues;
 }
 

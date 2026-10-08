@@ -1,8 +1,10 @@
 import {
   ACCENTS,
   type Accent,
+  type Arrangement,
   type CollectionDto,
   collectionInputSchema,
+  describeArrangement,
   type EditAccess,
   type TemplateDto,
   type View,
@@ -25,6 +27,7 @@ import {
   Spinner,
   TextField,
 } from '../../components/ui.tsx';
+import { ArrangementEditor } from '../templates/ArrangementEditor.tsx';
 
 interface FormState {
   templateId: string;
@@ -35,6 +38,8 @@ interface FormState {
   editAccess: EditAccess;
   defaultView: View;
   quickAdd: boolean;
+  /** Its own shelf order, or null to follow the template's. */
+  arrangement: Arrangement | null;
   ownerId: string;
 }
 
@@ -96,6 +101,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
           editAccess: c.editAccess,
           defaultView: c.defaultView,
           quickAdd: c.quickAdd,
+          arrangement: c.arrangement,
           ownerId: c.ownerId,
         });
       }
@@ -110,6 +116,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         editAccess: 'owner',
         defaultView: 'wall',
         quickAdd: false,
+        arrangement: null,
         ownerId: me?.id ?? '',
       });
     }
@@ -143,7 +150,7 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
         const { templateId: _t, ...rest } = parsed.data;
         const ownerChange =
           me?.role === 'admin' && form.ownerId !== existing.data?.ownerId ? { ownerId: form.ownerId } : {};
-        await update.mutateAsync({ id: params.collectionId, ...rest, ...ownerChange });
+        await update.mutateAsync({ id: params.collectionId, ...rest, arrangement: form.arrangement, ...ownerChange });
         navigate({ to: '/c/$collectionId', params: { collectionId: params.collectionId } });
       }
     } catch (err) {
@@ -260,6 +267,37 @@ export function CollectionFormPage({ mode }: { mode: 'create' | 'edit' }) {
             ]}
           />
         </Field>
+        {mode === 'edit' && template && (
+          <Field
+            label="Shelf order"
+            help="How items are grouped and ordered on the shelf, and in “Shelf order” on the wall and table."
+          >
+            <div className="grid gap-2.5">
+              <Segmented
+                label="Shelf order"
+                value={form.arrangement ? 'own' : 'template'}
+                onChange={(v) => set({ arrangement: v === 'own' ? [...(template.shelf.arrange ?? [])] : null })}
+                options={[
+                  { value: 'template', label: 'Same as the template' },
+                  { value: 'own', label: 'Its own' },
+                ]}
+              />
+              {form.arrangement ? (
+                <ArrangementEditor
+                  value={form.arrangement}
+                  onChange={(arrangement) => set({ arrangement })}
+                  fields={template.fields}
+                />
+              ) : (
+                <p className="text-[0.85rem] text-ink-muted">
+                  {template.shelf.arrange?.length
+                    ? `${template.name}: ${describeArrangement(template.shelf.arrange, template.fields)}`
+                    : `${template.name} has no shelf order: items are shown newest first.`}
+                </p>
+              )}
+            </div>
+          </Field>
+        )}
         {template && template.bindings.search.length > 0 && (
           <Field
             label="After picking a search result"

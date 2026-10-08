@@ -37,10 +37,11 @@ test('books sit on a shelf sized by their pages and height, and lift when hovere
   const leaning = page.getByRole('link', { name: 'Leaning' });
   await expect(leaning).toHaveAttribute('style', /rotate\(8deg\)/);
 
-  // Hovering lifts it, straightens it and moves its neighbour aside (newest first, so it's on the left).
+  // Hovering lifts it, straightens it and moves its neighbour aside (in the Books shelf order,
+  // by author then title, Neighbour comes right after it).
   await leaning.hover();
   await expect(leaning).toHaveAttribute('style', /translateY\(-16px\) rotate\(0deg\)/);
-  await expect(page.getByRole('link', { name: 'Neighbour' })).toHaveAttribute('style', /translateX\(-10px\)/);
+  await expect(page.getByRole('link', { name: 'Neighbour' })).toHaveAttribute('style', /translateX\(10px\)/);
   await leaning.click();
   await expect(page.getByRole('heading', { name: 'Leaning' })).toBeVisible();
 

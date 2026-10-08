@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type Arrangement, arrangementSchema } from './arrangement.ts';
 import { bindingSlugSchema, bindingsSchema, bindingTargetSchema, choicesSchema } from './bindings.ts';
 import { fieldSchema, type TemplateData } from './template.ts';
 
@@ -92,6 +93,8 @@ export const collectionUpdateSchema = z
     visibility: z.enum(VISIBILITIES),
     editAccess: z.enum(EDIT_ACCESS),
     quickAdd: z.boolean(),
+    /** Its own shelf order; null follows the template's. */
+    arrangement: arrangementSchema.nullable(),
   })
   .partial();
 export type CollectionUpdate = z.input<typeof collectionUpdateSchema>;
@@ -110,6 +113,8 @@ export interface CollectionDto {
   publicSlug: string | null;
   editAccess: EditAccess;
   quickAdd: boolean;
+  /** Its own shelf order, or null to follow the template's. */
+  arrangement: Arrangement | null;
   itemCount: number;
   createdAt: string;
   updatedAt: string;
@@ -193,7 +198,7 @@ export const SORT_DIRS = ['asc', 'desc'] as const;
 
 export const itemListQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
-  /** `$title`, `$added`, `$accession` or a field id. */
+  /** `$title`, `$added`, `$accession`, `$arranged` (shelf order) or a field id. */
   sort: z.string().max(40).default('$added'),
   dir: z.enum(SORT_DIRS).default('desc'),
   /** Filters as `fieldId:value`, repeatable. */

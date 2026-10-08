@@ -1,4 +1,5 @@
 export * from './api.ts';
+export * from './arrangement.ts';
 export * from './bindings.ts';
 export * from './csv.ts';
 export * from './health.ts';

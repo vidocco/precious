@@ -1,4 +1,6 @@
 import {
+  type Arrangement,
+  canArrangeBy,
   type FieldDefinition,
   type FieldMeta,
   type FigureValue,
@@ -91,6 +93,46 @@ export function fieldExpr(field: FieldDefinition): SQL {
   }
   if (field.type === 'boolean') return sql`(${path})::boolean`;
   return sql`lower(${path})`;
+}
+
+let icu: Promise<boolean> | undefined;
+
+/** Whether the database has ICU's language-aware collation, so Álvarez sorts next to Alonso rather than after Z. */
+export function hasIcu(db: Db): Promise<boolean> {
+  icu ??= db
+    .execute(sql`select 1 from pg_collation where collname = 'und-x-icu'`)
+    .then((rows) => rows.length > 0)
+    .catch(() => false);
+  return icu;
+}
+
+/**
+ * ORDER BY for a shelf order: each level in turn, empty values last, then the title.
+ * Text is compared ignoring case (and accents' byte order, with ICU), as the web app groups it;
+ * fields holding several values (tags) are ordered by their first value.
+ */
+export function arrangedOrder(levels: Arrangement, fields: FieldDefinition[], withIcu: boolean): SQL[] {
+  const text = (e: SQL) => (withIcu ? sql`lower(${e}) collate "und-x-icu"` : sql`lower(${e})`);
+  const out: SQL[] = [];
+  for (const l of levels) {
+    let e: SQL;
+    if (l.ref === '$title') e = text(sql`${items.title}`);
+    else if (l.ref === '$accession') e = sql`${items.accessionNo}`;
+    else if (l.ref === '$added') e = sql`${items.createdAt}`;
+    else {
+      const f = fields.find((x) => x.id === l.ref);
+      if (!f || !canArrangeBy(f)) continue;
+      e =
+        isNumericType(f.type) || f.type === 'boolean'
+          ? fieldExpr(f)
+          : text(
+              sql`nullif(btrim(case when jsonb_typeof(${items.data}->${f.id}) = 'array' then ${items.data}->${f.id}->>0 else ${items.data}->>${f.id} end), '')`,
+            );
+    }
+    out.push(sql`${e} ${sql.raw(l.dir === 'desc' ? 'desc' : 'asc')} nulls last`);
+  }
+  out.push(text(sql`${items.title}`));
+  return out;
 }
 
 /** Turns `fieldId:value` filters into SQL conditions; unknown fields are ignored. */

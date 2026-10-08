@@ -1,4 +1,5 @@
 import type {
+  Arrangement,
   Bindings,
   EndpointData,
   FieldMeta,
@@ -125,6 +126,8 @@ export const collections = pgTable(
     publicSlug: text('public_slug').unique(),
     editAccess: editAccess('edit_access').notNull().default('owner'),
     quickAdd: boolean('quick_add').notNull().default(false),
+    /** Its own shelf order; null follows the template's. */
+    arrangement: jsonb('arrangement').$type<Arrangement>(),
     ...timestamps,
   },
   (t) => [index('collections_owner_idx').on(t.ownerId), index('collections_template_idx').on(t.templateId)],

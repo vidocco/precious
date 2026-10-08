@@ -48,6 +48,7 @@ function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
     ...t,
     fields,
     card: {
+      ...t.card,
       slots: {
         tl: ok(t.card.slots.tl) ? t.card.slots.tl : null,
         tr: ok(t.card.slots.tr) ? t.card.slots.tr : null,
@@ -80,6 +81,7 @@ function pruneRefs(t: TemplateData, fields: FieldDefinition[]): TemplateData {
       rulesField: ok(t.shelf.rulesField) ? t.shelf.rulesField : null,
       lean: t.shelf.lean && ids.has(t.shelf.lean.field) ? t.shelf.lean : null,
       subtitle: ok(t.shelf.subtitle) ? t.shelf.subtitle : null,
+      arrange: (t.shelf.arrange ?? []).filter((l) => ok(l.ref)),
     },
   };
 }

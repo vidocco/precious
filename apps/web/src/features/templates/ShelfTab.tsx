@@ -1,14 +1,20 @@
 import {
+  arrangeItems,
+  describeArrangement,
   describeShelf,
   type FieldDefinition,
   type ItemDto,
+  isNumericType,
   type Measure,
   type Shelf as ShelfRules,
+  sectionBreaks,
   type TemplateData,
 } from '@precious/shared';
 import { useMemo } from 'react';
 import { Shelf } from '../../components/Shelf.tsx';
 import { Button, Caps, IconButton, Segmented, Select, TextInput } from '../../components/ui.tsx';
+import { LOCALE } from '../../lib/format.ts';
+import { ArrangementEditor } from './ArrangementEditor.tsx';
 import { sampleItem } from './editorUtils.ts';
 
 type SetT = (patch: Partial<TemplateData>) => void;
@@ -102,6 +108,14 @@ function MeasureRow({
   );
 }
 
+function sampleGroupValue(f: FieldDefinition, k: number): unknown {
+  if (f.type === 'boolean') return k % 2 === 0;
+  if (isNumericType(f.type)) return k + 1;
+  if (f.type === 'date') return `20${10 + k}-01-01`;
+  const value = f.options.choices?.[k] ?? `${f.label} ${'ABC'[k] ?? k}`;
+  return f.type === 'tags' || f.type === 'multichoice' ? [value] : value;
+}
+
 /** Example items for the preview, spread across the rules so each one shows. */
 function samples(t: TemplateData): ItemDto[] {
   const s = t.shelf;
@@ -137,9 +151,18 @@ function samples(t: TemplateData): ItemDto[] {
     }
     if (s.by === 'rules' && s.rulesField) data[s.rulesField] = ruleValues[i % ruleValues.length];
     if (s.lean) data[s.lean.field] = i === 4 ? s.lean.equals : typeof s.lean.equals === 'boolean' ? !s.lean.equals : '';
+    // A few different values at each level of the shelf order, so its groups and markers show.
+    for (const [level, l] of (s.arrange ?? []).entries()) {
+      const f = t.fields.find((x) => x.id === l.ref);
+      if (f)
+        data[f.id] = sampleGroupValue(
+          f,
+          level === 0 ? Math.floor(i / 4) % 3 : level === 1 ? Math.floor(i / 2) % 2 : i % 3,
+        );
+    }
     out.push({ ...item, id: `shelf-sample-${i}`, data });
   }
-  return out;
+  return arrangeItems(s.arrange ?? [], out);
 }
 
 /** The template's Shelf tab: how big items are, which lean, and what the spine says. */
@@ -154,6 +177,10 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
   const rulesField = fields.find((f) => f.id === s.rulesField);
   const leanField = fields.find((f) => f.id === s.lean?.field);
   const preview = useMemo(() => samples(t), [t]);
+  const breaks = useMemo(
+    () => sectionBreaks(s.arrange ?? [], preview, t.fields, { locale: LOCALE }),
+    [s.arrange, preview, t.fields],
+  );
 
   function setMode(m: Mode) {
     if (m === mode) return;
@@ -406,6 +433,17 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
         </section>
 
         <section className="grid gap-2">
+          <div>
+            <Caps>Order on the shelf</Caps>
+            <p className={small}>
+              Group and order items like a library: by genre, then author, then series… Choose which levels show a
+              section marker where they start. Collections can set their own order.
+            </p>
+          </div>
+          <ArrangementEditor value={s.arrange ?? []} onChange={(arrange) => setS({ arrange })} fields={t.fields} />
+        </section>
+
+        <section className="grid gap-2">
           <Caps>On the spine</Caps>
           <div className="flex flex-wrap items-center gap-2 text-[0.88rem] text-ink-muted">
             The title, and under it
@@ -430,8 +468,11 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
 
       <aside className="grid content-start gap-2 self-start rounded-[12px] border border-line bg-wall p-3.5 xl:sticky xl:top-20">
         <Caps>Preview</Caps>
-        <p className="text-[0.8rem] text-ink-muted">{describeShelf(s, t.fields)}</p>
-        <Shelf items={preview} rules={s} fields={t.fields} />
+        <p className="text-[0.8rem] text-ink-muted">
+          {describeShelf(s, t.fields)}
+          {!!s.arrange?.length && ` · Arranged by ${describeArrangement(s.arrange, t.fields)}`}
+        </p>
+        <Shelf items={preview} rules={s} fields={t.fields} breaks={breaks} />
       </aside>
     </div>
   );

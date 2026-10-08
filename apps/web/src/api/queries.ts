@@ -192,11 +192,12 @@ export function useCollectionMutations() {
 
 // ---------------------------------------------------------------- items
 
-export const useItems = (collectionId: string, query: ItemListQuery) =>
+export const useItems = (collectionId: string, query: ItemListQuery, enabled = true) =>
   useQuery({
     queryKey: keys.items(collectionId, query),
     queryFn: () => api.get<ItemListResponse>(`/api/collections/${collectionId}/items${qs({ ...query })}`),
     placeholderData: keepPreviousData,
+    enabled,
   });
 
 export const useItem = (id: string) =>
