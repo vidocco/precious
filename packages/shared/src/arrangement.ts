@@ -11,6 +11,21 @@ import { type FormatContext, formatValue } from './values.ts';
 
 export const ARRANGE_SYSTEM_REFS = { $title: 'Title', $accession: 'Accession number', $added: 'Date added' } as const;
 
+/**
+ * How a level's markers look on the shelf, in centimetres at the books' scale: a divider's thickness
+ * and height, or a hanging label's width and height (levels that start each group on a new board).
+ * Anything left out is drawn as it is by default (dividers as tall as the tallest book).
+ */
+export const markerStyleSchema = z.object({
+  width: z.number().min(0.2, 'At least 0.2 cm').max(40, 'At most 40 cm').optional(),
+  height: z.number().min(0.5, 'At least 0.5 cm').max(60, 'At most 60 cm').optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'A colour like #c8462b')
+    .optional(),
+});
+export type MarkerStyle = z.output<typeof markerStyleSchema>;
+
 export const arrangeLevelSchema = z
   .object({
     /** A field id, or $title, $accession or $added. */
@@ -18,8 +33,10 @@ export const arrangeLevelSchema = z
     dir: z.enum(['asc', 'desc']).default('asc'),
     /** A divider (or heading) where each group of this level starts. */
     marker: z.boolean().default(false),
-    /** Each group starts on a new board of the shelf. */
+    /** Each group starts on a new board of the shelf, with its marker as a label hanging from the board. */
     newBoard: z.boolean().default(false),
+    /** Size and colour of the markers; saved only once changed, so older data has none. */
+    markerStyle: markerStyleSchema.optional(),
   })
   .refine((l) => l.marker || !l.newBoard, {
     message: 'Starting each group on a new board needs a section marker',
@@ -103,11 +120,17 @@ export interface SectionBreak {
   depth: number;
   label: string;
   newBoard: boolean;
+  style?: MarkerStyle;
 }
 
 /**
- * The section markers to draw before each item (in the order given), from marked levels only:
- * where a level's value changes, or a level above it changes. No marked levels, no markers.
+ * The section markers to draw before each item (in shelf order), from marked levels only: where a
+ * level's value changes, or a level above it changes. No marked levels, no markers.
+ *
+ * Items without a value at a marked level get a "No genre" marker only when other groups share
+ * their place, i.e. an earlier item under the same outer groups had a value there. Empty values sort
+ * last, so earlier is everywhere: when the first item under a parent has no value, none has, and
+ * there is nothing to set them apart from.
  */
 export function sectionBreaks(
   levels: Arrangement,
@@ -118,18 +141,25 @@ export function sectionBreaks(
   const marked = levels.flatMap((l, i) => (l.marker ? [i] : []));
   if (marked.length === 0) return items.map(() => []);
   let prev: (string | null)[] | null = null;
+  // Per level: whether a group with a value has come before, under the current outer groups.
+  const valued = levels.map(() => false);
   return items.map((item) => {
     const keys = levels.map((l) => groupKey(l.ref, item));
     const changed = prev === null ? 0 : keys.findIndex((k, i) => k !== prev?.[i]);
     prev = keys;
     if (changed < 0) return [];
-    return marked
-      .filter((i) => i >= changed)
+    // The outer groups of every level below the one that changed are new.
+    for (let i = changed + 1; i < levels.length; i++) valued[i] = false;
+    const out = marked
+      .filter((i) => i >= changed && (keys[i] !== null || valued[i]))
       .map((i) => ({
         depth: marked.indexOf(i),
         label: groupLabel(levels[i]?.ref ?? '', item, fields, ctx),
         newBoard: levels[i]?.newBoard ?? false,
+        ...(levels[i]?.markerStyle && { style: levels[i]?.markerStyle }),
       }));
+    for (const [i, k] of keys.entries()) if (k !== null) valued[i] = true;
+    return out;
   });
 }
 

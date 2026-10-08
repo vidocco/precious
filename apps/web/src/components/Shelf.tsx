@@ -50,11 +50,32 @@ interface Divider {
   label: string;
   depth: number;
   w: number;
+  /** A set height; otherwise a little taller than the tallest book on the board. */
+  h?: number;
+  color?: string;
 }
 
 type Entry = Spine | Divider;
 
+/** A section's label hanging from the front of the board its group starts on. */
+interface HangingLabel {
+  key: string;
+  label: string;
+  depth: number;
+  /** A set width; otherwise as wide as its text. */
+  w?: number;
+  h: number;
+  color?: string;
+}
+
+interface Board {
+  key: string;
+  entries: Entry[];
+  labels: HangingLabel[];
+}
+
 const DIVIDER_W = [16, 12];
+const LABEL_H_CM = 3;
 
 const cmFmt = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 
@@ -65,7 +86,8 @@ const cmFmt = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, minimumF
  * leans, and slides its neighbours apart.
  *
  * With section breaks (a shelf order with marked levels), a labelled divider stands before
- * the first item of each group, and groups of levels that ask for it start on a new board.
+ * the first item of each group. Groups of levels that start each on a new board hang a label
+ * from the front of that board instead. Both take the level's size and colour, if it has them.
  */
 export function Shelf({
   items,
@@ -119,53 +141,106 @@ export function Shelf({
   );
 
   // Fill each shelf to the width, then start the next one. An item and the dividers before it
-  // stay together, so a divider never ends a shelf on its own.
+  // stay together, so a divider never ends a shelf on its own. Groups of levels that start on a new
+  // board hang their label from it instead of standing a divider among the books.
   const rows = useMemo(() => {
-    const out: Entry[][] = [];
+    const out: Board[] = [];
     const usable = Math.max(120, width - SIDE * 2);
-    let row: Entry[] = [];
+    const cm = (v: number | undefined) => (v === undefined ? undefined : Math.max(3, Math.round(v * px)));
+    let row: Board | null = null;
     let used = 0;
     spines.forEach((s, i) => {
       const marks = breaks?.[i] ?? [];
       const unit: Entry[] = [
-        ...marks.map(
-          (b): Divider => ({
-            kind: 'divider',
+        ...marks
+          .filter((b) => !b.newBoard)
+          .map(
+            (b): Divider => ({
+              kind: 'divider',
+              key: `${s.key}-${b.depth}`,
+              label: b.label,
+              depth: b.depth,
+              w: cm(b.style?.width) ?? DIVIDER_W[Math.min(b.depth, DIVIDER_W.length - 1)] ?? 12,
+              h: cm(b.style?.height),
+              color: b.style?.color,
+            }),
+          ),
+        s,
+      ];
+      const labels = marks
+        .filter((b) => b.newBoard)
+        .map(
+          (b): HangingLabel => ({
             key: `${s.key}-${b.depth}`,
             label: b.label,
             depth: b.depth,
-            w: DIVIDER_W[Math.min(b.depth, DIVIDER_W.length - 1)] ?? 12,
+            w: cm(b.style?.width),
+            h: cm(b.style?.height) ?? Math.round(LABEL_H_CM * px),
+            color: b.style?.color,
           }),
-        ),
-        s,
-      ];
+        );
       const unitWidth =
         unit.reduce((sum, e) => sum + e.w + (e.kind === 'spine' ? e.room : 0), 0) + GAP * (unit.length - 1);
-      if (row.length && (marks.some((b) => b.newBoard) || used + GAP + unitWidth > usable)) {
+      if (!row || (row.entries.length && (labels.length || used + GAP + unitWidth > usable))) {
+        row = { key: s.key, entries: [], labels: [] };
         out.push(row);
-        row = [];
         used = 0;
       }
-      used += (row.length ? GAP : 0) + unitWidth;
-      row.push(...unit);
+      used += (row.entries.length ? GAP : 0) + unitWidth;
+      row.entries.push(...unit);
+      row.labels.push(...labels);
     });
-    if (row.length) out.push(row);
     return out;
-  }, [spines, breaks, width]);
+  }, [spines, breaks, width, px]);
 
   return (
     <div ref={box} className="grid gap-6" onPointerLeave={() => setActive(null)}>
       {width > 0 &&
         rows.map((row) => {
-          const at = row.findIndex((e) => e.kind === 'spine' && e.item.id === active);
-          const tallest = Math.max(0, ...row.map((e) => (e.kind === 'spine' ? e.h : 0)));
+          const at = row.entries.findIndex((e) => e.kind === 'spine' && e.item.id === active);
+          const tallest = Math.max(0, ...row.entries.map((e) => (e.kind === 'spine' ? e.h : 0)));
+          const hanging = Math.max(0, ...row.labels.map((l) => l.h));
           return (
             <div
-              key={row[0]?.key}
-              // Room above for the lift.
+              key={row.key}
+              // Room above for the lift, and below for labels hanging from the board.
               className="relative flex items-end gap-[2px] px-3 pt-6 pb-2.5"
+              style={hanging ? { marginBottom: hanging + 4 } : undefined}
             >
-              {row.map((e, i) => {
+              {row.labels.length > 0 && (
+                <div className="absolute inset-x-3 top-full flex items-start gap-1.5">
+                  {row.labels.map((l) => {
+                    // Section headings under the page's own: the outermost level h2, then h3, h4.
+                    const Heading = (['h2', 'h3', 'h4'] as const)[Math.min(l.depth, 2)] ?? 'h4';
+                    return (
+                      <Heading
+                        key={l.key}
+                        title={l.label}
+                        className={cx(
+                          'm-0 flex items-center overflow-hidden rounded-b-[4px] leading-none font-bold tracking-[0.08em] whitespace-nowrap uppercase shadow-object',
+                          !l.color &&
+                            (l.depth === 0
+                              ? 'bg-accent text-accent-ink'
+                              : 'border border-t-0 border-line bg-surface text-ink'),
+                          l.w ? 'justify-center px-1' : 'px-2.5',
+                        )}
+                        style={{
+                          width: l.w,
+                          height: l.h,
+                          maxWidth: l.w ? undefined : '60%',
+                          fontSize: Math.min(11, Math.max(7, Math.round(l.h * 0.5))),
+                          ...(l.color && { background: l.color, color: inkFor(l.color) }),
+                          // The clip holding it to the board.
+                          boxShadow: 'inset 0 2px 0 rgb(0 0 0 / 0.18), 0 2px 4px -2px rgb(0 0 0 / 0.35)',
+                        }}
+                      >
+                        <span className="overflow-hidden text-ellipsis">{l.label}</span>
+                      </Heading>
+                    );
+                  })}
+                </div>
+              )}
+              {row.entries.map((e, i) => {
                 const d = at < 0 ? 0 : i - at;
                 const shift =
                   at < 0 || d === 0 || Math.abs(d) > SHIFT.length ? 0 : Math.sign(d) * (SHIFT[Math.abs(d) - 1] ?? 0);
@@ -179,13 +254,18 @@ export function Shelf({
                       title={e.label}
                       className={cx(
                         'spine flex flex-none items-start justify-center overflow-hidden rounded-t-[4px] border border-b-0 pt-2 shadow-object',
-                        e.depth === 0 ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface text-ink',
+                        e.color
+                          ? 'border-transparent'
+                          : e.depth === 0
+                            ? 'border-accent bg-accent text-accent-ink'
+                            : 'border-line bg-surface text-ink',
                       )}
                       style={{
                         width: e.w,
-                        // Dividers stand a little above the books, the outermost ones most.
-                        height: tallest + (e.depth === 0 ? 14 : 6),
+                        // Unless set, dividers stand a little above the books, the outermost ones most.
+                        height: e.h ?? tallest + (e.depth === 0 ? 14 : 6),
                         transform: `translateX(${shift}px)`,
+                        ...(e.color && { background: e.color, color: inkFor(e.color) }),
                       }}
                     >
                       <span

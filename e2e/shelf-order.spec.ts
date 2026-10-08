@@ -1,14 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
 import { signInAsAdmin } from './helpers.ts';
 
-/** What the shelf shows, in order: dividers as "| Label", spines as their title. */
+/** What the shelf shows, in order: hanging labels as "# Label", dividers as "| Label", spines as their title. */
 const shelfOrder = (page: Page) =>
   page
     .locator('section[aria-label="Shelf"]')
-    .locator('[role="separator"], a')
+    .locator('h2, h3, h4, [role="separator"], a')
     .evaluateAll((els) =>
       els.map((e) =>
-        e.getAttribute('role') === 'separator' ? `| ${e.getAttribute('aria-label')}` : e.getAttribute('aria-label'),
+        /^H\d$/.test(e.tagName)
+          ? `# ${e.textContent}`
+          : e.getAttribute('role') === 'separator'
+            ? `| ${e.getAttribute('aria-label')}`
+            : e.getAttribute('aria-label'),
       ),
     );
 
@@ -82,37 +86,52 @@ test('a template arranges the shelf like a library, and a collection can have it
   await page.getByRole('combobox', { name: 'Level 1', exact: true }).selectOption({ label: 'Genre' });
   await page.getByRole('checkbox', { name: 'Section marker' }).check();
   await page.getByRole('checkbox', { name: 'Each on a new board' }).check();
+  // Genres hang a 6 × 2.5 cm green label from their board.
+  await page.getByLabel('Level 1 marker width').fill('6');
+  await page.getByLabel('Level 1 marker height').fill('2.5');
+  await page.getByLabel('Level 1 marker colour').fill('#2e5e4e');
   await page.getByRole('button', { name: 'Add a level' }).click();
   await page.getByRole('combobox', { name: 'Level 2', exact: true }).selectOption({ label: 'Author' });
   await page.getByRole('checkbox', { name: 'Section marker' }).nth(1).check();
   await page.getByRole('button', { name: 'Add a level' }).click();
   await page.getByRole('combobox', { name: 'Level 3', exact: true }).selectOption({ label: 'Series number' });
   await expect(page.getByText('Genre (marked, new board) → Author (marked) → Series number').first()).toBeVisible();
-  // The preview shows the dividers.
+  // The preview shows the labels and dividers.
+  await expect(page.locator('aside').getByRole('heading').first()).toBeVisible();
   await expect(page.locator('aside').getByRole('separator').first()).toBeVisible();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible();
 
-  // The shelf opens in shelf order, with a divider where each genre and author starts.
+  // The shelf opens in shelf order: each genre on its own board with its label hanging from it,
+  // and a divider where each author starts.
   await page.goto(`/c/${c.id}?view=shelf`);
-  await expect(page.getByRole('separator', { name: 'Fantasy' })).toBeVisible();
+  const fantasyLabel = page.getByRole('heading', { name: 'Fantasy' });
+  await expect(fantasyLabel).toBeVisible();
   expect(await shelfOrder(page)).toEqual([
-    '| Fantasy',
+    '# Fantasy',
     '| Borges',
     'Ficciones',
     '| Le Guin',
     'A Wizard of Earthsea',
     'The Tombs of Atuan',
-    '| Science fiction',
+    '# Science fiction',
     '| Butler',
     'Kindred',
     '| Herbert',
     'Dune',
   ]);
+  await expect(page.getByRole('separator', { name: 'Fantasy' })).toHaveCount(0);
+  // The label hangs below the board, at its left end, in the size and colour set (8 px a cm).
+  const label = await fantasyLabel.boundingBox();
+  const firstDivider = await page.getByRole('separator', { name: 'Borges' }).boundingBox();
+  expect(label?.y ?? 0).toBeGreaterThan((firstDivider?.y ?? 0) + (firstDivider?.height ?? 0));
+  expect(Math.abs((label?.x ?? 0) - (firstDivider?.x ?? 0))).toBeLessThan(2);
+  expect(Math.round(label?.width ?? 0)).toBe(48);
+  expect(Math.round(label?.height ?? 0)).toBe(20);
+  await expect(fantasyLabel).toHaveCSS('background-color', 'rgb(46, 94, 78)');
   // Each genre on its own board.
-  const fantasy = await page.getByRole('separator', { name: 'Fantasy' }).boundingBox();
-  const scifi = await page.getByRole('separator', { name: 'Science fiction' }).boundingBox();
-  expect(scifi?.y ?? 0).toBeGreaterThan((fantasy?.y ?? 0) + (fantasy?.height ?? 0));
+  const scifi = await page.getByRole('heading', { name: 'Science fiction' }).boundingBox();
+  expect(scifi?.y ?? 0).toBeGreaterThan((label?.y ?? 0) + (label?.height ?? 0));
 
   // The wall and table in shelf order show the same sections.
   await page.goto(`/c/${c.id}?view=wall&sort=$arranged`);

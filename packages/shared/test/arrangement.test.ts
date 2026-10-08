@@ -146,6 +146,76 @@ describe('section markers', () => {
   });
 });
 
+describe('"No section" markers', () => {
+  const shelfFields: FieldDefinition[] = [
+    fieldSchema.parse({ id: 'genre', label: 'Genre', type: 'text' }),
+    fieldSchema.parse({ id: 'saga', label: 'Saga', type: 'text' }),
+    fieldSchema.parse({ id: 'coll', label: 'Collection', type: 'text' }),
+  ];
+  const b = (title: string, genre?: string, saga?: string, coll?: string) =>
+    book(title, { ...(genre && { genre }), ...(saga && { saga }), ...(coll && { coll }) });
+  const l = levels([['genre', true], ['saga', true], ['coll', true], ['$title']]);
+
+  it('only show where other groups share the place, as in the Genre / Saga / Collection example', () => {
+    // In shelf order: empty values last at each level.
+    const shelf = [
+      b('Book A', 'Genre A', 'Saga A', 'Collection A'),
+      b('Book B', 'Genre A', 'Saga A', 'Collection B'),
+      b('Book C', 'Genre A'),
+      b('Book A', 'Genre B', undefined, 'Collection A'),
+      b('Book B', 'Genre B', undefined, 'Collection B'),
+      b('Book C', 'Genre B'),
+      b('Book A', 'Genre C'),
+      b('Book B', 'Genre C'),
+      b('Book C', 'Genre C'),
+      b('Book D'),
+    ];
+    expect(labels(sectionBreaks(l, shelf, shelfFields))).toEqual([
+      ['Genre A', '  Saga A', '    Collection A'],
+      ['    Collection B'],
+      // Saga A came before it in Genre A; no collection in Genre A without a saga.
+      ['  No saga'],
+      // No saga anywhere in Genre B, so no saga marker at all.
+      ['Genre B', '    Collection A'],
+      ['    Collection B'],
+      ['    No collection'],
+      // Neither sagas nor collections in Genre C.
+      ['Genre C'],
+      [],
+      [],
+      // Other genres exist; nothing to tell apart below it.
+      ['No genre'],
+    ]);
+  });
+
+  it('show none when nothing at all has a value at a level', () => {
+    const shelf = [b('One'), b('Two')];
+    expect(sectionBreaks(l, shelf, shelfFields).flat()).toEqual([]);
+  });
+
+  it('carry each level’s marker style', () => {
+    const styled = arrangementSchema.parse([
+      { ref: 'genre', marker: true, newBoard: true, markerStyle: { width: 6, height: 2.5, color: '#2e5e4e' } },
+      { ref: 'saga', marker: true },
+    ]);
+    const [first] = sectionBreaks(styled, [b('Book A', 'Genre A', 'Saga A')], shelfFields);
+    expect(first).toEqual([
+      { depth: 0, label: 'Genre A', newBoard: true, style: { width: 6, height: 2.5, color: '#2e5e4e' } },
+      { depth: 1, label: 'Saga A', newBoard: false },
+    ]);
+  });
+
+  it('check marker sizes and colours', () => {
+    const style = (markerStyle: unknown) =>
+      arrangementSchema.safeParse([{ ref: 'genre', marker: true, markerStyle }]).success;
+    expect(style({})).toBe(true);
+    expect(style({ width: 0.8, height: 25, color: '#C8462B' })).toBe(true);
+    expect(style({ width: 0 })).toBe(false);
+    expect(style({ height: 100 })).toBe(false);
+    expect(style({ color: 'red' })).toBe(false);
+  });
+});
+
 describe('group keys and order', () => {
   it('groups by the first of several values, and treats blanks as empty', () => {
     expect(groupKey('genre', books[1] as (typeof books)[number])).toBe('fantasy');
