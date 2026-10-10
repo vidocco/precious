@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SHELF,
   describeShelf,
+  fieldSchema,
   type Shelf,
   STARTER_TEMPLATES,
   shelfSchema,
@@ -88,7 +89,7 @@ describe('shelf settings', () => {
       lean: null,
     });
     expect(
-      describeShelf(mixed, [...books.fields, { id: 'format', label: 'Format', type: 'choice', options: {} }]),
+      describeShelf(mixed, [...books.fields, fieldSchema.parse({ id: 'format', label: 'Format', type: 'choice' })]),
     ).toBe('Height by Format: Hardcover 24 cm · others 18 cm · thickness from Pages × 0.005 + 0.3 cm');
   });
 

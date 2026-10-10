@@ -28,6 +28,7 @@ import {
   cx,
   EmptyState,
   ErrorBox,
+  IconButton,
   Segmented,
   Select,
   Spinner,
@@ -37,6 +38,7 @@ import { useDebounced, useStoredState } from '../../lib/hooks.ts';
 import { AddSheet } from '../items/AddSheet.tsx';
 import { CollectionHistory } from './CollectionHistory.tsx';
 import { VISIBILITY_LABEL } from './labels.ts';
+import { CellInput, type TableEdits, useTableEdits } from './TableEditing.tsx';
 
 const PAGE = 60;
 const FILTERABLE = new Set(['choice', 'multichoice', 'tags', 'boolean']);
@@ -165,6 +167,8 @@ function ItemTable({
   dir,
   onSort,
   breaks,
+  edits,
+  formulas,
 }: {
   items: ItemDto[];
   fields: FieldDefinition[];
@@ -174,9 +178,14 @@ function ItemTable({
   onSort: (ref: string) => void;
   /** Section markers before each item, in shelf order. */
   breaks?: SectionBreak[][];
+  /** Unlocked: cells are inputs, and rows don't open their item. */
+  edits?: TableEdits;
+  /** Fields worked out by a formula, which can't be typed into. */
+  formulas: Set<string>;
 }) {
   const navigate = useNavigate();
   const cols = ['$accession', '$title', ...columns];
+  const editing = edits?.unlocked ? edits : undefined;
   return (
     <div className="overflow-x-auto rounded-[12px] border border-line bg-surface">
       <table className="w-full border-collapse text-[0.88rem]">
@@ -215,26 +224,61 @@ function ItemTable({
                   </th>
                 </tr>
               ))}
-              <tr
-                onClick={() => navigate({ to: '/i/$itemId', params: { itemId: item.id } })}
-                className="cursor-pointer hover:bg-surface-sunk"
-              >
-                {cols.map((ref) => (
-                  <td key={ref} className="max-w-[28ch] truncate border-b border-line px-3.5 py-2 tabular">
-                    {ref === '$title' ? (
-                      <Link
-                        to="/i/$itemId"
-                        params={{ itemId: item.id }}
-                        className="font-semibold text-ink no-underline"
+              {editing ? (
+                <tr>
+                  {cols.map((ref) => {
+                    const field = fields.find((f) => f.id === ref);
+                    const problem = editing.errorAt(item, ref);
+                    const fixed = ref === '$accession' || (ref !== '$title' && (!field || formulas.has(ref)));
+                    return (
+                      <td
+                        key={ref}
+                        className={cx(
+                          'border-b border-line px-2 py-1.5 align-top tabular',
+                          editing.isChanged(item, ref) && 'bg-gilt-soft',
+                        )}
                       >
-                        {item.title}
-                      </Link>
-                    ) : (
-                      refValue(ref, item, fields)
-                    )}
-                  </td>
-                ))}
-              </tr>
+                        {fixed ? (
+                          <span
+                            className="block px-1.5 py-1.5 whitespace-nowrap text-ink-muted"
+                            title={formulas.has(ref) ? 'Calculated' : undefined}
+                          >
+                            {refValue(ref, item, fields)}
+                          </span>
+                        ) : (
+                          <CellInput item={item} field={field} edits={editing} />
+                        )}
+                        {problem && (
+                          <span role="alert" className="block px-1 pt-0.5 text-[0.75rem] text-danger">
+                            {problem}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ) : (
+                <tr
+                  onClick={() => navigate({ to: '/i/$itemId', params: { itemId: item.id } })}
+                  className="cursor-pointer hover:bg-surface-sunk"
+                >
+                  {cols.map((ref) => (
+                    <td key={ref} className="max-w-[28ch] truncate border-b border-line px-3.5 py-2 tabular">
+                      {ref === '$title' ? (
+                        <Link
+                          to="/i/$itemId"
+                          params={{ itemId: item.id }}
+                          className="font-semibold text-ink no-underline"
+                        >
+                          {item.title}
+                        </Link>
+                      ) : (
+                        refValue(ref, item, fields)
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              )}
             </Fragment>
           ))}
         </tbody>
@@ -339,13 +383,15 @@ export function CollectionPage() {
     !(view === 'shelf' && !search.sort && arrangement === null),
   );
   const fields = template.data?.fields ?? [];
-  const [columns, setColumns] = useStoredState<string[]>(
-    `precious.columns.${collectionId}`,
+  // Until columns are picked, the first five fields (worked out once the template is here).
+  const [picked, setColumns] = useStoredState<string[] | null>(`precious.columns.${collectionId}`, null);
+  const columns =
+    picked ??
     fields
       .filter((f) => !f.hidden && f.type !== 'longtext')
       .slice(0, 5)
-      .map((f) => f.id),
-  );
+      .map((f) => f.id);
+  const edits = useTableEdits(collectionId, fields);
 
   if (collection.isError)
     return (
@@ -447,18 +493,44 @@ export function CollectionPage() {
           </Button>
         )}
         <span className="flex-1" />
+        {view === 'table' && c.canEdit && total > 0 && (
+          <span className="flex items-center gap-1">
+            <IconButton
+              icon={edits.unlocked ? 'unlock' : 'lock'}
+              label={edits.unlocked ? 'Lock the table' : 'Unlock the table to edit it'}
+              aria-pressed={edits.unlocked}
+              onClick={edits.unlocked ? edits.lock : edits.unlock}
+              className={cx('border', edits.unlocked ? 'border-accent text-accent' : 'border-line')}
+            />
+            {edits.unlocked && (
+              <Button
+                variant="primary"
+                icon="save"
+                onClick={edits.save}
+                disabled={edits.saving}
+                aria-label={edits.changed ? `Save changes to ${edits.changed} items` : 'Save'}
+                title="Save the changes and lock the table"
+                className="h-9"
+              >
+                {edits.saving ? 'Saving…' : edits.changed ? edits.changed : null}
+              </Button>
+            )}
+          </span>
+        )}
         {view === 'table' && <ColumnPicker fields={fields} value={columns} onChange={setColumns} />}
         <Segmented
           label="View"
           value={view}
           onChange={(v) => setSearch({ view: v as View })}
           options={[
-            { value: 'wall', label: 'Wall' },
-            { value: 'shelf', label: 'Shelf' },
+            { value: 'wall', label: 'Wall', disabled: edits.unlocked, title: 'Save or lock the table first' },
+            { value: 'shelf', label: 'Shelf', disabled: edits.unlocked, title: 'Save or lock the table first' },
             { value: 'table', label: 'Table' },
           ]}
         />
       </div>
+
+      {edits.unlocked && edits.error && <ErrorBox>{edits.error}</ErrorBox>}
 
       {(filters.length > 0 || search.q) && (
         <div className="flex flex-wrap items-center gap-2">
@@ -504,6 +576,8 @@ export function CollectionPage() {
           dir={dir}
           onSort={(ref) => setSearch({ sort: ref, dir: sort === ref && dir === 'asc' ? 'desc' : 'asc' })}
           breaks={breaks}
+          edits={c.canEdit ? edits : undefined}
+          formulas={new Set(t.bindings.computed.filter((x) => x.kind === 'formula').map((x) => x.field))}
         />
       ) : view === 'shelf' ? (
         <section className="grid gap-1" aria-label="Shelf">

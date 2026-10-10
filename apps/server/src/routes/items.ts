@@ -3,6 +3,7 @@ import {
   effectiveArrangement,
   formatAccession,
   type ItemListResponse,
+  itemBatchUpdateSchema,
   itemInputSchema,
   itemListQuerySchema,
   itemUpdateSchema,
@@ -16,7 +17,7 @@ import { mustUser } from '../auth/guard.ts';
 import type { AppContext } from '../context.ts';
 import type { Db } from '../db/client.ts';
 import { collections, images, items } from '../db/schema.ts';
-import { badRequest, notFound } from '../errors.ts';
+import { badRequest, HttpError, notFound } from '../errors.ts';
 import { assertCanEditItems, loadCollection } from '../services/collections.ts';
 import { applyFormulas, syncComputed } from '../services/computed.ts';
 import {
@@ -44,10 +45,10 @@ export function searchRank(q: string) {
   return sql`word_similarity(${n}, ${items.searchText})`;
 }
 
-function validationError(error: z.ZodError) {
+function validationError(error: z.ZodError, at = 'data') {
   return badRequest(
     'Some values are not valid.',
-    error.issues.map((i) => ({ path: ['data', ...i.path].join('.'), message: i.message })),
+    error.issues.map((i) => ({ path: [at, ...i.path].join('.'), message: i.message })),
   );
 }
 
@@ -222,6 +223,63 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
     return itemDto(row.item, row.collection.accessionPrefix, row.cover, row.createdByName);
   });
 
+  type Loaded = { item: ItemRow } & Pick<Awaited<ReturnType<typeof loadCollection>>, 'collection' | 'template'>;
+
+  /**
+   * What a change to an item writes: values typed by hand (locked, so a refresh keeps them), or
+   * from a data source where nothing typed by hand is in the way. Invalid values throw, with
+   * their paths under `at` ("data.platform").
+   */
+  async function changeOf(row: Loaded, change: z.output<typeof itemUpdateSchema>, userId: string, at = 'data') {
+    const fields = row.template.fields;
+    const meta = row.item.fieldMeta;
+    const sources = change.sources ?? {};
+    // A value from a data source never replaces one typed by hand.
+    const blocked = (key: string) => key in sources && meta[key]?.locked === true;
+
+    let data = row.item.data;
+    let changed: string[] = [];
+    if (change.data) {
+      const incoming = Object.fromEntries(Object.entries(change.data).filter(([k]) => !blocked(k)));
+      const parsed = buildItemSchema(fields, { partial: true }).safeParse(incoming);
+      if (!parsed.success) throw validationError(parsed.error, at);
+      // Keys sent empty are cleared; values of hidden fields are kept untouched.
+      const cleared = Object.entries(incoming)
+        .filter(
+          ([k, v]) =>
+            fields.some((f) => f.id === k && !f.hidden) &&
+            (v === null || v === '' || (Array.isArray(v) && v.length === 0)),
+        )
+        .map(([k]) => k);
+      data = { ...row.item.data, ...parsed.data };
+      for (const k of cleared) delete data[k];
+      changed = [...Object.keys(parsed.data), ...cleared].filter(
+        (k) => JSON.stringify(row.item.data[k]) !== JSON.stringify(data[k]),
+      );
+    }
+    const coverImageId = blocked('$cover') ? undefined : change.coverImageId;
+    if (coverImageId !== undefined) await assertImage(db, coverImageId);
+    const title = (!blocked('$title') && change.title) || row.item.title;
+    if (title !== row.item.title) changed.push('$title');
+    if (coverImageId !== undefined && coverImageId !== row.item.coverImageId) changed.push('$cover');
+    const accession = formatAccession(row.collection.accessionPrefix, row.item.accessionNo);
+    const calculated = await applyFormulas(
+      row.template,
+      title,
+      data,
+      writeMeta(meta, changed, { sources, userId, lock: true, unlock: change.unlock }),
+    );
+    return {
+      title,
+      data: calculated.data,
+      ...(coverImageId !== undefined && { coverImageId }),
+      ...(change.externalRefs && { externalRefs: { ...row.item.externalRefs, ...change.externalRefs } }),
+      fieldMeta: calculated.meta,
+      searchText: buildSearchText({ title, accession, data: calculated.data }, fields),
+      updatedBy: userId,
+    };
+  }
+
   app.patch(
     '/api/items/:id',
     { schema: { tags: ['items'], params: itemParams, body: itemUpdateSchema } },
@@ -229,60 +287,53 @@ export const itemRoutes: FastifyPluginAsyncZod<AppContext> = async (app, ctx) =>
       const viewer = mustUser(req);
       const row = await loadItem(req.params.id, viewer);
       assertCanEditItems(viewer, row.collection);
-      const fields = row.template.fields;
-
-      const meta = row.item.fieldMeta;
-      const sources = req.body.sources ?? {};
-      // A value from a data source never replaces one typed by hand.
-      const blocked = (key: string) => key in sources && meta[key]?.locked === true;
-
-      let data = row.item.data;
-      let changed: string[] = [];
-      if (req.body.data) {
-        const incoming = Object.fromEntries(Object.entries(req.body.data).filter(([k]) => !blocked(k)));
-        const parsed = buildItemSchema(fields, { partial: true }).safeParse(incoming);
-        if (!parsed.success) throw validationError(parsed.error);
-        // Keys sent empty are cleared; values of hidden fields are kept untouched.
-        const cleared = Object.entries(incoming)
-          .filter(
-            ([k, v]) =>
-              fields.some((f) => f.id === k && !f.hidden) &&
-              (v === null || v === '' || (Array.isArray(v) && v.length === 0)),
-          )
-          .map(([k]) => k);
-        data = { ...row.item.data, ...parsed.data };
-        for (const k of cleared) delete data[k];
-        changed = [...Object.keys(parsed.data), ...cleared].filter(
-          (k) => JSON.stringify(row.item.data[k]) !== JSON.stringify(data[k]),
-        );
-      }
-      const coverImageId = blocked('$cover') ? undefined : req.body.coverImageId;
-      if (coverImageId !== undefined) await assertImage(db, coverImageId);
-      const title = (!blocked('$title') && req.body.title) || row.item.title;
-      if (title !== row.item.title) changed.push('$title');
-      if (coverImageId !== undefined && coverImageId !== row.item.coverImageId) changed.push('$cover');
-      const accession = formatAccession(row.collection.accessionPrefix, row.item.accessionNo);
-      const calculated = await applyFormulas(
-        row.template,
-        title,
-        data,
-        writeMeta(meta, changed, { sources, userId: viewer.id, lock: true, unlock: req.body.unlock }),
-      );
       await db
         .update(items)
-        .set({
-          title,
-          data: calculated.data,
-          ...(coverImageId !== undefined && { coverImageId }),
-          ...(req.body.externalRefs && { externalRefs: { ...row.item.externalRefs, ...req.body.externalRefs } }),
-          fieldMeta: calculated.meta,
-          searchText: buildSearchText({ title, accession, data: calculated.data }, fields),
-          updatedBy: viewer.id,
-        })
+        .set(await changeOf(row, req.body, viewer.id))
         .where(eq(items.id, row.item.id));
       const [full] = await selectItems(db).where(eq(items.id, row.item.id));
       if (!full) throw notFound('Item');
       return itemDto(full.item, row.collection.accessionPrefix, full.cover, full.createdByName);
+    },
+  );
+
+  // Several items changed at once, from the table: every change is checked first, then all are
+  // saved together, or none is.
+  app.patch(
+    '/api/collections/:id/items',
+    { schema: { tags: ['items'], params: collectionParams, body: itemBatchUpdateSchema } },
+    async (req) => {
+      const viewer = mustUser(req);
+      const { collection, template } = await loadCollection(db, req.params.id, viewer);
+      assertCanEditItems(viewer, collection);
+      const ids = req.body.items.map((i) => i.id);
+      if (new Set(ids).size !== ids.length) throw badRequest('Each item can only be changed once at a time.');
+      const rows = await selectItems(db).where(and(eq(items.collectionId, collection.id), inArray(items.id, ids)));
+      const byId = new Map(rows.map((r) => [r.item.id, r.item]));
+      const issues: { path: string; message: string }[] = [];
+      const writes: { id: string; set: Awaited<ReturnType<typeof changeOf>> }[] = [];
+      for (const [i, change] of req.body.items.entries()) {
+        const item = byId.get(change.id);
+        if (!item) {
+          issues.push({ path: `items.${i}.id`, message: 'This item is no longer in the collection.' });
+          continue;
+        }
+        try {
+          writes.push({
+            id: item.id,
+            set: await changeOf({ item, collection, template }, change, viewer.id, `items.${i}.data`),
+          });
+        } catch (err) {
+          if (!(err instanceof HttpError && err.issues)) throw err;
+          issues.push(...err.issues);
+        }
+      }
+      if (issues.length) throw badRequest('Some values are not valid, so nothing was saved.', issues);
+      await db.transaction(async (tx) => {
+        for (const w of writes) await tx.update(items).set(w.set).where(eq(items.id, w.id));
+      });
+      const saved = await selectItems(db).where(inArray(items.id, ids));
+      return { items: saved.map((r) => itemDto(r.item, collection.accessionPrefix, r.cover, r.createdByName)) };
     },
   );
 

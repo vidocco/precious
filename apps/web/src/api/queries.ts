@@ -12,6 +12,7 @@ import type {
   FormulaTryInput,
   FormulaTryResult,
   HistoryPoint,
+  ItemBatchUpdate,
   ItemDto,
   ItemHistoryPoint,
   ItemInput,
@@ -228,6 +229,15 @@ export function useItemMutations() {
     remove: useMutation({
       mutationFn: (id: string) => api.del(`/api/items/${id}`),
       onSuccess: (_r, id) => done(undefined, id),
+    }),
+    /** Several items of a collection at once: all saved, or none. */
+    updateMany: useMutation({
+      mutationFn: ({ collectionId, items }: ItemBatchUpdate & { collectionId: string }) =>
+        api.patch<{ items: ItemDto[] }>(`/api/collections/${collectionId}/items`, { items }),
+      onSuccess: (r) => {
+        done();
+        for (const item of r.items) qc.setQueryData(keys.item(item.id), item);
+      },
     }),
   };
 }

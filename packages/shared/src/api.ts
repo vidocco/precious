@@ -157,6 +157,21 @@ export const itemUpdateSchema = itemInputSchema.partial().extend({
 });
 export type ItemUpdate = z.input<typeof itemUpdateSchema>;
 
+/** Changes to several items of a collection at once (the table, unlocked): all are saved, or none. */
+export const itemBatchUpdateSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        title: itemInputSchema.shape.title.optional(),
+        data: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+export type ItemBatchUpdate = z.input<typeof itemBatchUpdateSchema>;
+
 export interface FieldMeta {
   source: 'user' | string;
   /** The binding provider or step that filled it. */

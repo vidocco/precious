@@ -83,14 +83,20 @@ function TagsInput({
   );
 }
 
-function DurationInput({
+export function DurationInput({
   id,
   value,
   onChange,
+  label,
+  compact,
 }: {
-  id: string;
+  id?: string;
   value: number | undefined;
   onChange: (v: number | undefined) => void;
+  /** Names the inputs ("Main story hours") where there is no label to point at them. */
+  label?: string;
+  /** Narrow, for a table cell. */
+  compact?: boolean;
 }) {
   const h = value === undefined ? '' : Math.floor(value / 60);
   const m = value === undefined ? '' : value % 60;
@@ -99,7 +105,7 @@ function DurationInput({
     onChange(Math.max(0, Math.round((Number(hours) || 0) * 60 + (Number(mins) || 0))));
   };
   return (
-    <div className="flex items-center gap-2">
+    <div className={cx('flex items-center', compact ? 'gap-1' : 'gap-2')}>
       <TextInput
         id={id}
         type="number"
@@ -107,8 +113,8 @@ function DurationInput({
         inputMode="numeric"
         value={h}
         onChange={(e) => update(e.target.value, String(m))}
-        className="w-24"
-        aria-label="Hours"
+        className={compact ? 'w-16 py-1 text-right' : 'w-24'}
+        aria-label={label ? `${label} hours` : 'Hours'}
       />
       <span className="text-ink-muted">h</span>
       <TextInput
@@ -118,8 +124,8 @@ function DurationInput({
         inputMode="numeric"
         value={m}
         onChange={(e) => update(String(h), e.target.value)}
-        className="w-20"
-        aria-label="Minutes"
+        className={compact ? 'w-14 py-1 text-right' : 'w-20'}
+        aria-label={label ? `${label} minutes` : 'Minutes'}
       />
       <span className="text-ink-muted">min</span>
     </div>

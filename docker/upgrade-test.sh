@@ -64,7 +64,7 @@ api POST /api/auth/sign-in/email '{"email":"upgrade@example.com","password":"cor
 TEMPLATE="$(api GET /api/templates | json 'd.find(t=>t.name==="Books").id')"
 COLLECTION="$(api POST /api/collections "{\"templateId\":\"$TEMPLATE\",\"name\":\"Books\"}" | json 'd.id')"
 COVER="$(curl -fsS -X POST "$BASE/api/images" -b "$JAR" -H "origin: $BASE" -F "file=@apps/web/public/icons/icon-192.png;type=image/png" | json 'd.id')"
-api POST "/api/collections/$COLLECTION/items" "{\"title\":\"Rayuela\",\"coverImageId\":\"$COVER\",\"data\":{\"author\":\"Julio Cortázar\",\"pages\":736}}" >/dev/null
+ITEM="$(api POST "/api/collections/$COLLECTION/items" "{\"title\":\"Rayuela\",\"coverImageId\":\"$COVER\",\"data\":{\"author\":\"Julio Cortázar\",\"pages\":736}}" | json 'd.id')"
 api POST /api/server/backups '{}' | grep -q '"ok":true' || fail "backup on $OLD"
 snapshot >"$BEFORE"
 grep -q '"Rayuela"' "$BEFORE" && grep -q '"Books"' "$BEFORE" || fail "empty snapshot"
@@ -84,12 +84,17 @@ api POST "/api/collections/$COLLECTION/items" '{"title":"Ficciones","data":{"aut
 SHELF='{arrange:[{ref:"author",marker:true},{ref:"$title"}],by:"rules",rulesField:"author",rules:[{values:["Julio Cortázar"],thickness:2,height:24}],measured:["thickness"]}'
 api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json "JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>({...t,shelf:{...t.shelf,...$SHELF}}))(d.find(t=>t.name===\"Books\")))")" >/dev/null
 api PATCH "/api/collections/$COLLECTION" '{"arrangement":[{"ref":"$title","marker":false}]}' >/dev/null || echo "   ($NEW has no collection shelf orders)"
+# Change items from the table, as the new version would.
+PAGES=737
+api PATCH "/api/collections/$COLLECTION/items" "{\"items\":[{\"id\":\"$ITEM\",\"data\":{\"pages\":$PAGES}}]}" >/dev/null \
+  || { echo "   ($NEW can't change several items at once)"; PAGES=736; }
 stop
 
 echo "-- $OLD again: rolling back onto data the new version wrote"
 start "$OLD"
 api GET "/api/collections/$COLLECTION" | grep -q '"Books"' || fail "$OLD can't read the collection after the rollback"
 api GET "/api/collections/$COLLECTION/items" | grep -q 'Ficciones' || fail "$OLD lost items after the rollback"
+api GET "/api/items/$ITEM" | grep -q "\"pages\":$PAGES" || fail "$OLD doesn't have the item as changed from the table"
 api GET /api/templates | grep -q '"Books"' || fail "$OLD can't read templates after the rollback"
 api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json 'JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>t)(d.find(t=>t.name==="Books")))')" >/dev/null \
   || fail "$OLD can't save the template after the rollback"
