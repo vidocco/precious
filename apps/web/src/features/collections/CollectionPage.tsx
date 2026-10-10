@@ -11,7 +11,7 @@ import {
   type View,
 } from '@precious/shared';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button as AriaButton, Checkbox, CheckboxGroup, Dialog, DialogTrigger, Popover } from 'react-aria-components';
 import { errorMessage } from '../../api/client.ts';
 import { useCollection, useCollectionMutations, useFigures, useItems, useMe, useTemplate } from '../../api/queries.ts';
@@ -38,7 +38,7 @@ import { useDebounced, useStoredState } from '../../lib/hooks.ts';
 import { AddSheet } from '../items/AddSheet.tsx';
 import { CollectionHistory } from './CollectionHistory.tsx';
 import { VISIBILITY_LABEL } from './labels.ts';
-import { CellInput, type TableEdits, useTableEdits } from './TableEditing.tsx';
+import { EditRow, type TableEdits, useTableEdits } from './TableEditing.tsx';
 
 const PAGE = 60;
 const FILTERABLE = new Set(['choice', 'multichoice', 'tags', 'boolean']);
@@ -168,7 +168,7 @@ function ItemTable({
   onSort,
   breaks,
   edits,
-  formulas,
+  computed,
 }: {
   items: ItemDto[];
   fields: FieldDefinition[];
@@ -178,27 +178,51 @@ function ItemTable({
   onSort: (ref: string) => void;
   /** Section markers before each item, in shelf order. */
   breaks?: SectionBreak[][];
-  /** Unlocked: cells are inputs, and rows don't open their item. */
+  /**
+   * Unlocked: every field is a column of inputs (not only the columns picked), the title stays in
+   * view, and rows don't open their item.
+   */
   edits?: TableEdits;
-  /** Fields worked out by a formula, which can't be typed into. */
-  formulas: Set<string>;
+  /** The template's values kept up to date or worked out; formulas can't be typed into. */
+  computed: TemplateDto['bindings']['computed'];
 }) {
   const navigate = useNavigate();
-  const cols = ['$accession', '$title', ...columns];
   const editing = edits?.unlocked ? edits : undefined;
+  const shown = columns.join('\n');
+  const unlocked = !!editing;
+  // Kept the same from one keystroke to the next, so rows that didn't change don't redraw.
+  const cols = useMemo(
+    () =>
+      unlocked
+        ? ['$title', ...fields.filter((f) => !f.hidden).map((f) => f.id)]
+        : ['$accession', '$title', ...shown.split('\n').filter(Boolean)],
+    [unlocked, fields, shown],
+  );
+  const formulas = useMemo(() => new Set(computed.filter((x) => x.kind === 'formula').map((x) => x.field)), [computed]);
   return (
     <div className="overflow-x-auto rounded-[12px] border border-line bg-surface">
-      <table className="w-full border-collapse text-[0.88rem]">
+      {/* Separate borders, so they stay with the title cells pinned while editing. */}
+      <table className={cx('w-full text-[0.88rem]', editing ? 'border-separate border-spacing-0' : 'border-collapse')}>
         <thead>
           <tr>
             {cols.map((ref) => (
-              <th key={ref} scope="col" className="border-b border-line px-3.5 py-2 text-left whitespace-nowrap">
+              <th
+                key={ref}
+                scope="col"
+                className={cx(
+                  'border-b border-line px-3.5 py-2 text-left whitespace-nowrap',
+                  editing &&
+                    ref === '$title' &&
+                    'bg-surface sm:sticky sm:left-0 sm:z-[1] sm:shadow-[1px_0_0_var(--line)]',
+                )}
+              >
                 <button
                   type="button"
                   onClick={() => onSort(ref)}
                   className="inline-flex items-center gap-1 text-[0.68rem] font-semibold tracking-[0.08em] text-ink-muted uppercase"
                 >
                   {refLabel(ref, fields)}
+                  {editing && fields.find((f) => f.id === ref)?.required && <span className="text-danger">*</span>}
                   {sort === ref && <Icon name={dir === 'asc' ? 'up' : 'down'} size={12} />}
                 </button>
               </th>
@@ -225,38 +249,15 @@ function ItemTable({
                 </tr>
               ))}
               {editing ? (
-                <tr>
-                  {cols.map((ref) => {
-                    const field = fields.find((f) => f.id === ref);
-                    const problem = editing.errorAt(item, ref);
-                    const fixed = ref === '$accession' || (ref !== '$title' && (!field || formulas.has(ref)));
-                    return (
-                      <td
-                        key={ref}
-                        className={cx(
-                          'border-b border-line px-2 py-1.5 align-top tabular',
-                          editing.isChanged(item, ref) && 'bg-gilt-soft',
-                        )}
-                      >
-                        {fixed ? (
-                          <span
-                            className="block px-1.5 py-1.5 whitespace-nowrap text-ink-muted"
-                            title={formulas.has(ref) ? 'Calculated' : undefined}
-                          >
-                            {refValue(ref, item, fields)}
-                          </span>
-                        ) : (
-                          <CellInput item={item} field={field} edits={editing} />
-                        )}
-                        {problem && (
-                          <span role="alert" className="block px-1 pt-0.5 text-[0.75rem] text-danger">
-                            {problem}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+                <EditRow
+                  item={item}
+                  cols={cols}
+                  fields={fields}
+                  formulas={formulas}
+                  cells={editing.drafts[item.id]}
+                  problems={editing.errors[item.id]}
+                  set={editing.set}
+                />
               ) : (
                 <tr
                   onClick={() => navigate({ to: '/i/$itemId', params: { itemId: item.id } })}
@@ -517,7 +518,7 @@ export function CollectionPage() {
             )}
           </span>
         )}
-        {view === 'table' && <ColumnPicker fields={fields} value={columns} onChange={setColumns} />}
+        {view === 'table' && !edits.unlocked && <ColumnPicker fields={fields} value={columns} onChange={setColumns} />}
         <Segmented
           label="View"
           value={view}
@@ -577,7 +578,7 @@ export function CollectionPage() {
           onSort={(ref) => setSearch({ sort: ref, dir: sort === ref && dir === 'asc' ? 'desc' : 'asc' })}
           breaks={breaks}
           edits={c.canEdit ? edits : undefined}
-          formulas={new Set(t.bindings.computed.filter((x) => x.kind === 'formula').map((x) => x.field))}
+          computed={t.bindings.computed}
         />
       ) : view === 'shelf' ? (
         <section className="grid gap-1" aria-label="Shelf">

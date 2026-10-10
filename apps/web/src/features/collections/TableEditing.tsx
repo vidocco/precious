@@ -1,17 +1,18 @@
 import { buildItemSchema, type FieldDefinition, type ItemDto } from '@precious/shared';
 import { useBlocker } from '@tanstack/react-router';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Button as AriaButton, Checkbox, CheckboxGroup, Dialog, DialogTrigger, Popover } from 'react-aria-components';
 import { ApiError, errorMessage } from '../../api/client.ts';
 import { useItemMutations, useUsers } from '../../api/queries.ts';
 import { Icon } from '../../components/Icon.tsx';
 import { cx, Select, TextInput } from '../../components/ui.tsx';
+import { refValue } from '../../lib/format.ts';
 import { DurationInput, type FormValue } from '../items/FieldInput.tsx';
 
 /** Cells changed in the table, as typed: by item id, then field id ($title for the title). */
 type Drafts = Record<string, Record<string, FormValue>>;
-
-const cellKey = (itemId: string, ref: string) => `${itemId}/${ref}`;
+/** What's wrong with cells, the same way round. */
+type Problems = Record<string, Record<string, string>>;
 const isEmpty = (v: unknown) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
 const items = (n: number) => (n === 1 ? '1 item' : `${n} items`);
 
@@ -42,10 +43,10 @@ export function useTableEdits(collectionId: string, fields: FieldDefinition[]) {
   const { updateMany } = useItemMutations();
   const [unlocked, setUnlocked] = useState(false);
   const [drafts, setDrafts] = useState<Drafts>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // By item, then cell: an item's own object only changes when its cells do, so other rows stay put.
+  const [errors, setErrors] = useState<Problems>({});
   const [error, setError] = useState('');
   const changed = Object.keys(drafts).length;
-  const fieldOf = (ref: string) => fields.find((f) => f.id === ref);
 
   useBlocker({
     disabled: changed === 0,
@@ -53,6 +54,32 @@ export function useTableEdits(collectionId: string, fields: FieldDefinition[]) {
       current.pathname !== next.pathname && !window.confirm(`Leave without saving your changes to ${items(changed)}?`),
     enableBeforeUnload: () => changed > 0,
   });
+
+  const set = useCallback(
+    (item: ItemDto, ref: string, value: FormValue) => {
+      const stored = ref === '$title' ? item.title : item.data[ref];
+      const unchanged = same(
+        fields.find((f) => f.id === ref),
+        value,
+        stored,
+      );
+      setDrafts((prev) => {
+        const cells = { ...prev[item.id] };
+        if (unchanged) delete cells[ref];
+        else cells[ref] = value;
+        const next = { ...prev };
+        if (Object.keys(cells).length) next[item.id] = cells;
+        else delete next[item.id];
+        return next;
+      });
+      setErrors((prev) => {
+        if (!prev[item.id]?.[ref]) return prev;
+        const { [ref]: _, ...rest } = prev[item.id] ?? {};
+        return { ...prev, [item.id]: rest };
+      });
+    },
+    [fields],
+  );
 
   function reset() {
     setDrafts({});
@@ -66,45 +93,37 @@ export function useTableEdits(collectionId: string, fields: FieldDefinition[]) {
     changed,
     saving: updateMany.isPending,
     error,
-    errorAt: (item: ItemDto, ref: string) => errors[cellKey(item.id, ref)],
-    /** What a cell shows: as typed, or as stored. */
-    valueAt(item: ItemDto, ref: string): FormValue {
-      const typed = drafts[item.id];
-      if (typed && ref in typed) return typed[ref];
-      return (ref === '$title' ? item.title : item.data[ref]) as FormValue;
-    },
-    isChanged: (item: ItemDto, ref: string) => !!drafts[item.id] && ref in (drafts[item.id] ?? {}),
+    drafts,
+    errors,
+    set,
     unlock: () => setUnlocked(true),
     /** Locks the table again, throwing away changes not saved (after asking). */
     lock() {
       if (changed && !window.confirm(`Throw away your changes to ${items(changed)}?`)) return;
       reset();
     },
-    set(item: ItemDto, ref: string, value: FormValue) {
-      const stored = ref === '$title' ? item.title : item.data[ref];
-      setDrafts((prev) => {
-        const cells = { ...prev[item.id] };
-        if (same(fieldOf(ref), value, stored)) delete cells[ref];
-        else cells[ref] = value;
-        const next = { ...prev };
-        if (Object.keys(cells).length) next[item.id] = cells;
-        else delete next[item.id];
-        return next;
-      });
-      setErrors(({ [cellKey(item.id, ref)]: _, ...rest }) => rest);
-    },
     /** Checks every change, then saves them all at once and locks the table again. */
     async save() {
       const schema = buildItemSchema(fields, { partial: true });
-      const found: Record<string, string> = {};
+      const found: Problems = {};
+      const flag = (id: string, ref: string, message: string) => {
+        found[id] = { ...found[id], [ref]: message };
+      };
       const changes = Object.entries(drafts).map(([id, cells]) => {
         const { $title, ...rest } = cells;
-        const data = Object.fromEntries(Object.entries(rest).map(([ref, v]) => [ref, toData(fieldOf(ref), v)]));
-        if ($title !== undefined && !String($title).trim()) found[cellKey(id, '$title')] = 'Give it a title';
+        const data = Object.fromEntries(
+          Object.entries(rest).map(([ref, v]) => [
+            ref,
+            toData(
+              fields.find((f) => f.id === ref),
+              v,
+            ),
+          ]),
+        );
+        if ($title !== undefined && !String($title).trim()) flag(id, '$title', 'Give it a title');
         const parsed = schema.safeParse(data);
-        if (!parsed.success) for (const i of parsed.error.issues) found[cellKey(id, String(i.path[0]))] = i.message;
-        for (const f of fields)
-          if (f.required && f.id in data && data[f.id] === null) found[cellKey(id, f.id)] = 'Required';
+        if (!parsed.success) for (const i of parsed.error.issues) flag(id, String(i.path[0]), i.message);
+        for (const f of fields) if (f.required && f.id in data && data[f.id] === null) flag(id, f.id, 'Required');
         return {
           id,
           ...($title !== undefined && { title: String($title) }),
@@ -123,11 +142,11 @@ export function useTableEdits(collectionId: string, fields: FieldDefinition[]) {
       } catch (err) {
         setError(errorMessage(err));
         if (err instanceof ApiError) {
-          const byCell: Record<string, string> = {};
+          const byCell: Problems = {};
           for (const [path, message] of Object.entries(err.issues)) {
             const [, i, part, ref] = path.split('.');
             const id = changes[Number(i)]?.id;
-            if (id) byCell[cellKey(id, part === 'data' && ref ? ref : '$title')] = message;
+            if (id) byCell[id] = { ...byCell[id], [part === 'data' && ref ? ref : '$title']: message };
           }
           setErrors(byCell);
         }
@@ -198,24 +217,35 @@ function ChoicesPopover(props: { value: string[]; onChange: (v: string[]) => voi
 }
 
 /** One cell of the unlocked table: a small input for the field's type. */
-export function CellInput({
+function CellInput({
   item,
   field,
-  edits,
+  value,
+  set,
+  invalid,
 }: {
   item: ItemDto;
   /** Undefined for the title. */
   field?: FieldDefinition;
-  edits: TableEdits;
+  value: FormValue;
+  set: (v: FormValue) => void;
+  invalid?: boolean;
 }) {
-  const ref = field?.id ?? '$title';
-  const value = edits.valueAt(item, ref);
-  const set = (v: FormValue) => edits.set(item, ref, v);
   const label = `${field?.label ?? 'Title'} of ${item.title}`;
-  const invalid = !!edits.errorAt(item, ref) || undefined;
   const text = 'py-1 text-[0.85rem]';
 
   switch (field?.type) {
+    case 'longtext':
+      return (
+        <textarea
+          aria-label={label}
+          aria-invalid={invalid}
+          rows={2}
+          value={String(value ?? '')}
+          onChange={(e) => set(e.target.value)}
+          className="block w-72 resize-y rounded-[9px] border border-line bg-wall px-3 py-1 text-[0.85rem] text-ink focus:border-accent focus:ring-3 focus:ring-accent/20 focus:outline-none aria-invalid:border-danger"
+        />
+      );
     case 'number':
     case 'money':
       return (
@@ -332,3 +362,74 @@ export function CellInput({
       );
   }
 }
+
+/**
+ * An item's row in the unlocked table. Rows only redraw when their own cells change, so typing
+ * stays quick with every field of many items on screen.
+ */
+export const EditRow = memo(function EditRow({
+  item,
+  cols,
+  fields,
+  formulas,
+  cells,
+  problems,
+  set,
+}: {
+  item: ItemDto;
+  /** $title, then field ids. */
+  cols: string[];
+  fields: FieldDefinition[];
+  /** Fields worked out by a formula, which can't be typed into. */
+  formulas: Set<string>;
+  /** This item's changed cells, if any. */
+  cells?: Record<string, FormValue>;
+  problems?: Record<string, string>;
+  set: TableEdits['set'];
+}) {
+  return (
+    <tr>
+      {cols.map((ref) => {
+        const field = fields.find((f) => f.id === ref);
+        const changed = !!cells && ref in cells;
+        const value = (changed ? cells[ref] : ref === '$title' ? item.title : item.data[ref]) as FormValue;
+        const problem = problems?.[ref];
+        const title = ref === '$title';
+        return (
+          <td
+            key={ref}
+            className={cx(
+              'border-b border-line px-2 py-1.5 align-top tabular',
+              changed ? 'bg-gilt-soft' : title && 'bg-surface',
+              // The title stays in view while scrolling across the fields.
+              // (Not on phones, where it would take most of the screen.)
+              title && 'sm:sticky sm:left-0 sm:z-[1] sm:shadow-[1px_0_0_var(--line)]',
+            )}
+          >
+            {field && formulas.has(ref) ? (
+              <span className="block px-1.5 py-1.5 whitespace-nowrap text-ink-muted" title="Calculated">
+                {refValue(ref, item, fields)}
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                {title && <span className="w-14 flex-none text-[0.72rem] text-ink-faint">{item.accession}</span>}
+                <CellInput
+                  item={item}
+                  field={field}
+                  value={value}
+                  set={(v) => set(item, ref, v)}
+                  invalid={!!problem || undefined}
+                />
+              </span>
+            )}
+            {problem && (
+              <span role="alert" className="block px-1 pt-0.5 text-[0.75rem] text-danger">
+                {problem}
+              </span>
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+});

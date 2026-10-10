@@ -29,6 +29,10 @@ test('the table unlocks to edit several items in place, and saves them all at on
 
   await page.getByRole('button', { name: 'Unlock the table to edit it' }).click();
   await expect(page.getByRole('button', { name: 'Lock the table' })).toBeVisible();
+  // Every field can be changed, not only the columns shown when locked.
+  await expect(page.getByRole('columnheader', { name: /Synopsis/ })).toBeVisible();
+  await page.getByLabel('Pages of Rayuela', { exact: true }).fill('736');
+  await page.getByLabel('Synopsis of Rayuela', { exact: true }).fill('A hopscotch novel.');
   await page.getByLabel('Author of Rayuela', { exact: true }).fill('J. Cortázar');
   await page.getByLabel('Title of Ficciones', { exact: true }).fill('Ficciones (1944)');
   await page.getByLabel('Language of Rayuela', { exact: true }).selectOption('ES');
@@ -46,7 +50,14 @@ test('the table unlocks to edit several items in place, and saves them all at on
   await expect(page.getByRole('cell', { name: 'J. Cortázar' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Ficciones (1944)' })).toBeVisible();
   const rayuela = await (await api.get(`/api/items/${ids.Rayuela}`)).json();
-  expect(rayuela.data).toMatchObject({ author: 'J. Cortázar', language: 'ES' });
+  expect(rayuela.data).toMatchObject({
+    author: 'J. Cortázar',
+    language: 'ES',
+    pages: 736,
+    synopsis: 'A hopscotch novel.',
+  });
+  // Locked again: back to the columns picked.
+  await expect(page.getByRole('columnheader', { name: /Synopsis/ })).toHaveCount(0);
   const ficciones = await (await api.get(`/api/items/${ids.Ficciones}`)).json();
   expect([ficciones.title, ficciones.data.author]).toEqual(['Ficciones (1944)', 'Borges']);
 
