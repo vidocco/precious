@@ -48,4 +48,40 @@ describe.runIf(TEST_DATABASE_URL)('shelf settings', () => {
     expect(res.status).toBe(400);
     expect(res.body.issues.map((i) => i.path)).toContain('shelf.thickness.field');
   });
+
+  it('keeps a size measured while a field’s value sets the other', async () => {
+    const {
+      id,
+      createdBy: _c,
+      version: _v,
+      createdAt: _ca,
+      updatedAt: _u,
+      usage: _us,
+      canEdit: _ce,
+      ...input
+    } = await books();
+    const shelf = {
+      ...input.shelf,
+      by: 'rules',
+      rulesField: 'author',
+      rules: [{ values: ['Borges'], thickness: 2, height: 18 }],
+      measured: ['thickness'],
+    };
+    const res = await admin.put<TemplateDto>(`/api/templates/${id}`, { ...input, shelf });
+    expect(res.status).toBe(200);
+    expect(res.body.shelf).toMatchObject({ by: 'rules', measured: ['thickness'], thickness: { field: 'pages' } });
+    // The measured size still has to read a number.
+    const bad = await admin.put<{ issues: { path: string }[] }>(`/api/templates/${id}`, {
+      ...input,
+      shelf: { ...shelf, thickness: { ...shelf.thickness, field: 'author' } },
+    });
+    expect(bad.status).toBe(400);
+    expect(bad.body.issues.map((i) => i.path)).toEqual(['shelf.thickness.field']);
+    // Back to both sizes by the rules: nothing extra is kept.
+    const both = await admin.put<TemplateDto>(`/api/templates/${id}`, {
+      ...input,
+      shelf: { ...shelf, measured: undefined },
+    });
+    expect(both.body.shelf).not.toHaveProperty('measured');
+  });
 });

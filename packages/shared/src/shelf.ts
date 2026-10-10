@@ -5,8 +5,9 @@ import type { FieldDefinition } from './template.ts';
 /**
  * How big each item is on the shelf. A template either measures every item the same
  * way (a fixed size, or read from a number field: pages × 0.005 cm + 0.3 cm), or
- * picks a size by the value of a field (Switch games are 1.1 × 17 cm). All sizes are
- * in centimetres.
+ * picks a size by the value of a field (Switch games are 1.1 × 17 cm). With a field's
+ * value, either size can still be measured instead (Format sets the height, Pages the
+ * thickness). All sizes are in centimetres.
  */
 
 const cm = z.number().min(0).max(1000);
@@ -23,6 +24,9 @@ export type Measure = z.output<typeof measureSchema>;
 
 const sizeSchema = z.object({ thickness: z.number().min(0.1).max(100), height: z.number().min(0.1).max(100) });
 
+export const SHELF_DIMENSIONS = ['thickness', 'height'] as const;
+export type ShelfDimension = (typeof SHELF_DIMENSIONS)[number];
+
 export const shelfSchema = z.object({
   by: z.enum(['measure', 'rules']).default('measure'),
   thickness: measureSchema.default({ field: null, factor: 1, add: 0, fallback: 2.5 }),
@@ -34,6 +38,11 @@ export const shelfSchema = z.object({
     .max(30)
     .default([]),
   otherwise: sizeSchema.default({ thickness: 2.5, height: 21 }),
+  /**
+   * With by 'rules', the sizes measured as with by 'measure' instead of set by the rules (the rules
+   * keep a number for them all the same). Saved only when used, so older data has none.
+   */
+  measured: z.array(z.enum(SHELF_DIMENSIONS)).max(2).optional(),
   /** Items lean when this field has this value (e.g. Status is Reading). */
   lean: z
     .object({ field: z.string(), equals: z.union([z.string(), z.boolean()]) })
@@ -49,6 +58,11 @@ export type ShelfInput = z.input<typeof shelfSchema>;
 
 export const DEFAULT_SHELF: Shelf = shelfSchema.parse({});
 
+/** Whether a size is set by the rules (a field's value) rather than measured (fixed, or from a number field). */
+export function sizedByRules(s: Pick<Shelf, 'by' | 'measured'>, dim: ShelfDimension): boolean {
+  return s.by === 'rules' && !s.measured?.includes(dim);
+}
+
 /** Problems with field references, for templateInputSchema. */
 export function shelfIssues(s: Shelf, fields: FieldDefinition[]): { path: (string | number)[]; message: string }[] {
   const issues: { path: (string | number)[]; message: string }[] = [];
@@ -60,13 +74,12 @@ export function shelfIssues(s: Shelf, fields: FieldDefinition[]): { path: (strin
     else if (!['number', 'money', 'duration', 'rating'].includes(f.type))
       issues.push({ path, message: `"${f.label}" is not a number, so it can't give a size` });
   };
-  if (s.by === 'measure') {
-    numeric(s.thickness.field, ['shelf', 'thickness', 'field']);
-    numeric(s.height.field, ['shelf', 'height', 'field']);
-  } else if (!s.rulesField)
-    issues.push({ path: ['shelf', 'rulesField'], message: 'Pick the field that sets the size' });
-  else if (!byId.has(s.rulesField))
-    issues.push({ path: ['shelf', 'rulesField'], message: `Unknown field "${s.rulesField}"` });
+  for (const dim of SHELF_DIMENSIONS) if (!sizedByRules(s, dim)) numeric(s[dim].field, ['shelf', dim, 'field']);
+  if (s.by === 'rules') {
+    if (!s.rulesField) issues.push({ path: ['shelf', 'rulesField'], message: 'Pick the field that sets the size' });
+    else if (!byId.has(s.rulesField))
+      issues.push({ path: ['shelf', 'rulesField'], message: `Unknown field "${s.rulesField}"` });
+  }
   if (s.lean && !byId.has(s.lean.field))
     issues.push({ path: ['shelf', 'lean', 'field'], message: `Unknown field "${s.lean.field}"` });
   if (s.subtitle && !s.subtitle.startsWith('$') && !byId.has(s.subtitle))
@@ -101,17 +114,11 @@ export interface SpineSize {
 
 /** An item's size on the shelf, kept within believable limits (2 mm–15 cm thick, 5–60 cm tall). */
 export function spineSize(s: Shelf, item: { data: Record<string, unknown> }): SpineSize {
-  let thickness: number;
-  let height: number;
-  if (s.by === 'rules') {
-    const values = s.rulesField ? asTexts(item.data[s.rulesField]) : [];
-    const rule = s.rules.find((r) => r.values.some((rv) => values.some((v) => sameText(v, rv))));
-    thickness = rule?.thickness ?? s.otherwise.thickness;
-    height = rule?.height ?? s.otherwise.height;
-  } else {
-    thickness = measure(s.thickness, item.data);
-    height = measure(s.height, item.data);
-  }
+  const values = s.by === 'rules' && s.rulesField ? asTexts(item.data[s.rulesField]) : [];
+  const rule = s.rules.find((r) => r.values.some((rv) => values.some((v) => sameText(v, rv)))) ?? s.otherwise;
+  const size = (dim: ShelfDimension) => (sizedByRules(s, dim) ? rule[dim] : measure(s[dim], item.data));
+  const thickness = size('thickness');
+  const height = size('height');
   let lean = false;
   if (s.lean) {
     const v = item.data[s.lean.field];
@@ -138,11 +145,14 @@ function describeMeasure(m: Measure, fields: FieldDefinition[]): string {
 /** The rule in words, as the shelf header shows it. */
 export function describeShelf(s: Shelf, fields: FieldDefinition[]): string {
   const out: string[] = [];
-  if (s.by === 'rules') {
-    const rules = s.rules.map((r) => `${r.values.join('/')} ${n(r.thickness)} × ${n(r.height)} cm`);
-    out.push(
-      `Size by ${label(fields, s.rulesField)}: ${[...rules, `others ${n(s.otherwise.thickness)} × ${n(s.otherwise.height)} cm`].join(' · ')}`,
-    );
+  const byRules = SHELF_DIMENSIONS.filter((dim) => sizedByRules(s, dim));
+  if (byRules.length) {
+    const size = (r: { thickness: number; height: number }) => `${byRules.map((dim) => n(r[dim])).join(' × ')} cm`;
+    const rules = s.rules.map((r) => `${r.values.join('/')} ${size(r)}`);
+    const what = byRules.length === 2 ? 'Size' : byRules[0] === 'thickness' ? 'Thickness' : 'Height';
+    out.push(`${what} by ${label(fields, s.rulesField)}: ${[...rules, `others ${size(s.otherwise)}`].join(' · ')}`);
+    for (const dim of SHELF_DIMENSIONS)
+      if (!byRules.includes(dim)) out.push(`${dim} ${describeMeasure(s[dim], fields)}`);
   } else if (!s.thickness.field && !s.height.field) {
     out.push(`Every item ${n(s.thickness.fallback)} × ${n(s.height.fallback)} cm`);
   } else {

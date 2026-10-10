@@ -78,9 +78,11 @@ diff -u "$BEFORE" "$AFTER" || fail "data changed when $NEW started"
 curl -fsS -o /dev/null "$BASE/media/$COVER/sm" -b "$JAR" || fail "cover not served by $NEW"
 api GET /api/server/backups | grep -q 'precious-.*\.dump' || fail "backups not listed by $NEW"
 api POST "/api/collections/$COLLECTION/items" '{"title":"Ficciones","data":{"author":"Jorge Luis Borges"}}' >/dev/null
-# Save the template as the new version would (with a shelf order, if it has them), and give the
-# collection its own order, then roll back.
-api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json 'JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>({...t,shelf:{...t.shelf,arrange:[{ref:"author",marker:true},{ref:"$title"}]}}))(d.find(t=>t.name==="Books")))')" >/dev/null
+# Save the template as the new version would (with a shelf order, and the height by the author
+# with the thickness still from the pages, if it has them), and give the collection its own order,
+# then roll back.
+SHELF='{arrange:[{ref:"author",marker:true},{ref:"$title"}],by:"rules",rulesField:"author",rules:[{values:["Julio Cortázar"],thickness:2,height:24}],measured:["thickness"]}'
+api PUT "/api/templates/$TEMPLATE" "$(api GET /api/templates | json "JSON.stringify((({id,createdBy,version,createdAt,updatedAt,usage,canEdit,...t})=>({...t,shelf:{...t.shelf,...$SHELF}}))(d.find(t=>t.name===\"Books\")))")" >/dev/null
 api PATCH "/api/collections/$COLLECTION" '{"arrangement":[{"ref":"$title","marker":false}]}' >/dev/null || echo "   ($NEW has no collection shelf orders)"
 stop
 

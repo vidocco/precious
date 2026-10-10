@@ -50,6 +50,20 @@ test('books sit on a shelf sized by their pages and height, and lift when hovere
   await page.getByRole('tab', { name: 'Shelf' }).click();
   await page.getByRole('radio', { name: 'Same for every item' }).click();
   await expect(page.getByText('Every item 2.5 × 21 cm')).toBeVisible();
+
+  // The height by a field's value, the thickness still from the pages.
+  await page.getByRole('radio', { name: 'By a field’s value' }).click();
+  await page.getByLabel('Size by field').selectOption({ label: 'Publisher' });
+  await page.getByLabel('Thickness from', { exact: true }).selectOption({ label: 'From Pages' });
+  await expect(
+    page.getByText('Height by Publisher: others 21 cm · thickness from Pages × 0.005 + 0.3 cm'),
+  ).toBeVisible();
+  await expect(page.getByLabel('Height for anything else')).toBeVisible();
+  await expect(page.getByLabel('Thickness for anything else')).toHaveCount(0);
+  // Measuring both is measuring from fields.
+  await page.getByLabel('Height from', { exact: true }).selectOption({ label: 'From Height' });
+  await expect(page.getByRole('radio', { name: 'From fields' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Thickness from Pages × 0.005 + 0.3 cm · height from Height')).toBeVisible();
 });
 
 test('a CSV file imports into a collection and exports back', async ({ page }) => {

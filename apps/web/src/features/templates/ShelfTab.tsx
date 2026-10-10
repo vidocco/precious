@@ -6,8 +6,11 @@ import {
   type ItemDto,
   isNumericType,
   type Measure,
+  SHELF_DIMENSIONS,
+  type ShelfDimension,
   type Shelf as ShelfRules,
   sectionBreaks,
+  sizedByRules,
   type TemplateData,
 } from '@precious/shared';
 import { useMemo } from 'react';
@@ -53,27 +56,40 @@ function Cm({
   );
 }
 
+const BY_RULES = '$rules';
+
+/**
+ * One size, measured: the same for every item, or from a number field. With a field's value
+ * setting sizes, it can be set by that field's value (in the table) instead.
+ */
 function MeasureRow({
   name,
   m,
   fields,
+  rules,
   onChange,
 }: {
   name: string;
   m: Measure;
   fields: FieldDefinition[];
-  onChange: (m: Measure) => void;
+  /** The field whose value sets sizes, and whether it sets this one. */
+  rules?: { label: string; on: boolean };
+  onChange: (m: Measure, byRules?: boolean) => void;
 }) {
+  const byRules = !!rules?.on;
   return (
     <div className="grid gap-1.5 rounded-[10px] border border-line bg-surface p-3">
       <b className="text-[0.9rem]">{name}</b>
       <div className="flex flex-wrap items-center gap-2 text-[0.88rem]">
         <Select
           aria-label={`${name} from`}
-          value={m.field ?? ''}
-          onChange={(e) => onChange({ ...m, field: e.target.value || null })}
+          value={byRules ? BY_RULES : (m.field ?? '')}
+          onChange={(e) =>
+            e.target.value === BY_RULES ? onChange(m, true) : onChange({ ...m, field: e.target.value || null }, false)
+          }
           className="w-auto py-1"
         >
+          {rules && <option value={BY_RULES}>By {rules.label}, in the table</option>}
           <option value="">The same for every item</option>
           {fields.map((f) => (
             <option key={f.id} value={f.id}>
@@ -81,7 +97,7 @@ function MeasureRow({
             </option>
           ))}
         </Select>
-        {m.field ? (
+        {byRules ? null : m.field ? (
           <>
             <span className="text-ink-muted">×</span>
             <Cm
@@ -140,12 +156,13 @@ function samples(t: TemplateData): ItemDto[] {
     const data = { ...item.data };
     // Work back from a believable size to the field value that gives it.
     const spread = ((i * 37) % 10) / 10;
-    const targets: [Measure, number][] = [
-      [s.thickness, 1.2 + spread * 3],
-      [s.height, 17 + ((i * 53) % 8)],
+    const targets: [ShelfDimension, number][] = [
+      ['thickness', 1.2 + spread * 3],
+      ['height', 17 + ((i * 53) % 8)],
     ];
-    for (const [m, target] of targets) {
-      if (s.by === 'measure' && m.field && m.factor > 0) {
+    for (const [dim, target] of targets) {
+      const m = s[dim];
+      if (!sizedByRules(s, dim) && m.field && m.factor > 0) {
         data[m.field] = Math.max(1, Math.round(((target - m.add) / m.factor) * 10) / 10);
       }
     }
@@ -176,6 +193,7 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
   const mode: Mode = s.by === 'rules' ? 'rules' : s.thickness.field || s.height.field ? 'fields' : 'fixed';
   const rulesField = fields.find((f) => f.id === s.rulesField);
   const leanField = fields.find((f) => f.id === s.lean?.field);
+  const byRules = SHELF_DIMENSIONS.filter((dim) => sizedByRules(s, dim));
   const preview = useMemo(() => samples(t), [t]);
   const breaks = useMemo(
     () => sectionBreaks(s.arrange ?? [], preview, t.fields, { locale: LOCALE }),
@@ -186,12 +204,28 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
     if (m === mode) return;
     if (m === 'rules') {
       const field = groupable[0];
-      setS({ by: 'rules', rulesField: field?.id ?? null, rules: s.rules.length ? s.rules : [] });
+      setS({ by: 'rules', rulesField: field?.id ?? null, rules: s.rules.length ? s.rules : [], measured: undefined });
     } else if (m === 'fixed') {
-      setS({ by: 'measure', thickness: { ...s.thickness, field: null }, height: { ...s.height, field: null } });
+      setS({
+        by: 'measure',
+        thickness: { ...s.thickness, field: null },
+        height: { ...s.height, field: null },
+        measured: undefined,
+      });
     } else {
-      setS({ by: 'measure', thickness: { ...s.thickness, field: numeric[0]?.id ?? null, factor: 1, add: 0 } });
+      setS({
+        by: 'measure',
+        thickness: { ...s.thickness, field: numeric[0]?.id ?? null, factor: 1, add: 0 },
+        measured: undefined,
+      });
     }
+  }
+
+  /** With a field's value setting sizes: one size set by it, or measured instead. Measuring both is "From fields". */
+  function setDimension(dim: ShelfDimension, m: Measure, rules: boolean) {
+    const measured = SHELF_DIMENSIONS.filter((d) => (d === dim ? !rules : !sizedByRules(s, d)));
+    if (measured.length === SHELF_DIMENSIONS.length) setS({ by: 'measure', [dim]: m, measured: undefined });
+    else setS({ [dim]: m, measured: measured.length ? measured : undefined });
   }
 
   return (
@@ -261,12 +295,22 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
                   ))}
                 </Select>
               </label>
+              {SHELF_DIMENSIONS.map((dim) => (
+                <MeasureRow
+                  key={dim}
+                  name={dim === 'thickness' ? 'Thickness' : 'Height'}
+                  m={s[dim]}
+                  fields={numeric}
+                  rules={{ label: rulesField?.label ?? 'its value', on: byRules.includes(dim) }}
+                  onChange={(m, rules) => setDimension(dim, m, !!rules)}
+                />
+              ))}
               <table className="w-full border-collapse text-[0.88rem]">
                 <thead>
                   <tr className="text-left text-[0.7rem] font-semibold tracking-[0.08em] text-ink-muted uppercase">
                     <th className="py-1 pr-2">When {rulesField?.label ?? 'it'} is</th>
-                    <th className="py-1 pr-2">Thickness</th>
-                    <th className="py-1 pr-2">Height</th>
+                    {byRules.includes('thickness') && <th className="py-1 pr-2">Thickness</th>}
+                    {byRules.includes('height') && <th className="py-1 pr-2">Height</th>}
                     <th />
                   </tr>
                 </thead>
@@ -297,24 +341,15 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
                           className="py-1"
                         />
                       </td>
-                      <td className="py-1.5 pr-2">
-                        <Cm
-                          label={`Thickness for rule ${i + 1}`}
-                          value={r.thickness}
-                          onChange={(thickness) =>
-                            setS({ rules: s.rules.map((x, j) => (j === i ? { ...x, thickness } : x)) })
-                          }
-                        />
-                      </td>
-                      <td className="py-1.5 pr-2">
-                        <Cm
-                          label={`Height for rule ${i + 1}`}
-                          value={r.height}
-                          onChange={(height) =>
-                            setS({ rules: s.rules.map((x, j) => (j === i ? { ...x, height } : x)) })
-                          }
-                        />
-                      </td>
+                      {byRules.map((dim) => (
+                        <td key={dim} className="py-1.5 pr-2">
+                          <Cm
+                            label={`${dim === 'thickness' ? 'Thickness' : 'Height'} for rule ${i + 1}`}
+                            value={r[dim]}
+                            onChange={(v) => setS({ rules: s.rules.map((x, j) => (j === i ? { ...x, [dim]: v } : x)) })}
+                          />
+                        </td>
+                      ))}
                       <td className="py-1.5">
                         <IconButton
                           icon="x"
@@ -327,20 +362,15 @@ export function ShelfTab({ t, set }: { t: TemplateData; set: SetT }) {
                   ))}
                   <tr className="border-t border-line">
                     <td className="py-1.5 pr-2 text-ink-muted">Anything else</td>
-                    <td className="py-1.5 pr-2">
-                      <Cm
-                        label="Thickness for anything else"
-                        value={s.otherwise.thickness}
-                        onChange={(thickness) => setS({ otherwise: { ...s.otherwise, thickness } })}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <Cm
-                        label="Height for anything else"
-                        value={s.otherwise.height}
-                        onChange={(height) => setS({ otherwise: { ...s.otherwise, height } })}
-                      />
-                    </td>
+                    {byRules.map((dim) => (
+                      <td key={dim} className="py-1.5 pr-2">
+                        <Cm
+                          label={`${dim === 'thickness' ? 'Thickness' : 'Height'} for anything else`}
+                          value={s.otherwise[dim]}
+                          onChange={(v) => setS({ otherwise: { ...s.otherwise, [dim]: v } })}
+                        />
+                      </td>
+                    ))}
                     <td />
                   </tr>
                 </tbody>
