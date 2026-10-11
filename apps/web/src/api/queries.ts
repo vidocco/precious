@@ -40,7 +40,14 @@ import type {
   UpdateUserInput,
   UserDto,
 } from '@precious/shared';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { ApiError, api } from './client.ts';
 
 export interface RecentItem extends ItemDto {
@@ -193,10 +200,34 @@ export function useCollectionMutations() {
 
 // ---------------------------------------------------------------- items
 
-export const useItems = (collectionId: string, query: ItemListQuery, enabled = true) =>
-  useQuery({
+/** Items asked for at a time; "Show more" asks for the next ones. */
+export const ITEMS_PAGE = 60;
+
+/** The pages loaded so far as one list. */
+function joinPages(data: InfiniteData<ItemListResponse>): ItemListResponse {
+  // An item added or removed between pages can shift the next one; show each item once.
+  const seen = new Set<string>();
+  const items = data.pages.flatMap((p) => p.items).filter((i) => !seen.has(i.id) && seen.add(i.id));
+  return { items, total: data.pages.at(-1)?.total ?? items.length };
+}
+
+/**
+ * A collection's items, a page at a time: each "Show more" fetches the next page and adds it to
+ * the ones loaded, so no request asks for more than a page (the server takes up to 200 at once).
+ */
+export const useItems = (collectionId: string, query: Omit<ItemListQuery, 'limit' | 'offset'>, enabled = true) =>
+  useInfiniteQuery({
     queryKey: keys.items(collectionId, query),
-    queryFn: () => api.get<ItemListResponse>(`/api/collections/${collectionId}/items${qs({ ...query })}`),
+    queryFn: ({ pageParam }) =>
+      api.get<ItemListResponse>(
+        `/api/collections/${collectionId}/items${qs({ ...query, limit: ITEMS_PAGE, offset: pageParam })}`,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0);
+      return last.items.length > 0 && loaded < last.total ? loaded : undefined;
+    },
+    select: joinPages,
     placeholderData: keepPreviousData,
     enabled,
   });

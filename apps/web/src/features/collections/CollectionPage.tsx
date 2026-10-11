@@ -40,7 +40,6 @@ import { CollectionHistory } from './CollectionHistory.tsx';
 import { VISIBILITY_LABEL } from './labels.ts';
 import { EditRow, type TableEdits, useTableEdits } from './TableEditing.tsx';
 
-const PAGE = 60;
 const FILTERABLE = new Set(['choice', 'multichoice', 'tags', 'boolean']);
 
 export interface CollectionSearch {
@@ -365,7 +364,6 @@ export function CollectionPage() {
   const filters = search.filter ?? [];
   const [q, setQ] = useState(search.q ?? '');
   const debouncedQ = useDebounced(q.trim(), 250);
-  const [limit, setLimit] = useState(PAGE);
 
   useEffect(() => {
     if ((search.q ?? '') !== debouncedQ)
@@ -380,7 +378,7 @@ export function CollectionPage() {
   // Wait for the template on the shelf, which may open in its shelf order.
   const items = useItems(
     collectionId,
-    { q: search.q, sort, dir, filter: filters, limit },
+    { q: search.q, sort, dir, filter: filters },
     !(view === 'shelf' && !search.sort && arrangement === null),
   );
   const fields = template.data?.fields ?? [];
@@ -558,7 +556,7 @@ export function CollectionPage() {
 
       {items.isPending ? (
         <Spinner label="Loading items" />
-      ) : items.isError ? (
+      ) : !items.data ? (
         <ErrorBox>{errorMessage(items.error)}</ErrorBox>
       ) : total === 0 ? (
         search.q || filters.length ? (
@@ -601,10 +599,20 @@ export function CollectionPage() {
         </Wall>
       )}
 
-      {items.data && items.data.items.length < total && (
-        <div className="flex justify-center">
-          <Button onClick={() => setLimit((l) => l + PAGE)} disabled={items.isFetching}>
-            {items.isFetching ? 'Loading…' : `Show more (${total - items.data.items.length} left)`}
+      {items.data && items.hasNextPage && (
+        <div className="grid justify-items-center gap-2">
+          {/* A page that didn't load leaves the ones already shown in place. */}
+          {items.isFetchNextPageError && (
+            <p role="alert" className="text-[0.88rem] text-danger">
+              Couldn’t load more: {errorMessage(items.error)}
+            </p>
+          )}
+          <Button onClick={() => items.fetchNextPage()} disabled={items.isFetchingNextPage}>
+            {items.isFetchingNextPage
+              ? 'Loading…'
+              : items.isFetchNextPageError
+                ? 'Try again'
+                : `Show more (${Math.max(0, total - items.data.items.length)} left)`}
           </Button>
         </div>
       )}
